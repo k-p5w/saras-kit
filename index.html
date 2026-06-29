@@ -3,97 +3,120 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>江戸・元禄和時計（改）</title>
+  <title>【不定時法】江戸・元禄和時計【1秒更新】</title>
   <style>
     body {
-      font-family: "Yu Mincho", serif;
-      text-align: center;
-      background: #fdf5e6;
-      padding: 50px;
+      margin: 0;
+      background: transparent;
+      font-family: "Yu Mincho", "游明朝", serif;
     }
 
     .clock-box {
-      border: 5px double #8b4513;
-      padding: 30px;
-      display: inline-block;
-      background: #fff5e6;
+      width: 380px;
+      padding: 25px;
+      background: linear-gradient(145deg, #111, #2b0000);
+      color: #ffd700;
+
+      border: 4px solid #c8a951;
+      border-radius: 14px;
+
+      box-shadow:
+        0 0 20px rgba(0, 0, 0, 0.7),
+        inset 0 0 15px rgba(255, 215, 0, 0.08);
     }
 
-    .big-text {
-      font-size: 3em;
-      color: #2f4f4f;
+    .toki-text {
+      font-size: 36px;
       font-weight: bold;
-      margin: 20px 0;
+      margin-bottom: 10px;
+    }
+
+    .bell-text {
+      font-size: 22px;
+      color: #e6b422;
     }
   </style>
 </head>
 
 <body>
+
   <div class="clock-box">
-    <h2>現在の不定時法（元禄風）</h2>
-    <p>地点：<span id="location-name">判定中...</span></p>
-    <div class="big-text" id="toki-result">--</div>
-    <div id="bell-result" style="font-size: 1.5em; color: #a52a2a;">--</div>
+    <div id="toki-result" class="toki-text">--</div>
+    <div id="bell-result" class="bell-text">--</div>
   </div>
 
+  <script src="clock-engine.js"></script>
   <script>
-    function update(lat, lon) {
-      const now = new Date();
-      // 経度補正（日本標準時との時差：135度との差）
-      const longitudeOffset = (lon - 135) / 15;
-      const doy = (Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(now.getFullYear(), 0, 0)) / 86400000;
-      const decl = 0.409 * Math.sin(0.0172 * (doy - 80));
-      const horizon = -7.36 * Math.PI / 180;
+    const TokiFormatter = (data) => {
+      const kokuNames = ["一つ", "二つ", "三つ", "四つ"];
 
-      const cosHourAngle = (Math.sin(horizon) - Math.sin(lat * Math.PI / 180) * Math.sin(decl)) / (Math.cos(lat * Math.PI / 180) * Math.cos(decl));
-      const hourAngle = Math.acos(Math.max(-1, Math.min(1, cosHourAngle))) * 180 / Math.PI / 15;
+      // 丑三つ時
+      if (data.shiIdx === 10 && data.kokuIdx === 2) return "丑三つ時";
 
-      const sunrise = 12 - hourAngle - longitudeOffset;
-      const sunset = 12 + hourAngle - longitudeOffset;
-      const currentTime = now.getHours() + now.getMinutes() / 60;
-
-      const dayLen = (sunset - sunrise) / 6;
-      const nightLen = (24 - (sunset - sunrise)) / 6;
-      const shi = ["卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑", "寅"];
-
-      let idx, progress;
-      if (currentTime >= sunrise && currentTime < sunset) {
-        progress = Math.min(5.999, (currentTime - sunrise) / dayLen);
-        idx = Math.floor(progress);
-      } else {
-        const timeFromSunset = (currentTime >= sunset) ? (currentTime - sunset) : (currentTime + (24 - sunset));
-        progress = Math.min(5.999, timeFromSunset / nightLen);
-        idx = 6 + Math.floor(progress);
+      // 子刻の分離（元禄式）
+      if (data.shiIdx === 9) {
+        const name = (data.kokuIdx < 2) ? "夜子" : "子";
+        return `${name}ノ刻 ${kokuNames[data.kokuIdx]}`;
       }
 
-      const kokuIdx = Math.floor((progress % 1) * 4);
-      const kokuNames = ["上刻", "中刻", "下刻", "終刻"]; // ご提案通り現代寄りを排除
-      const bellCounts = [6, 5, 4, 9, 8, 7, 6, 5, 4, 9, 8, 7];
+      return `${data.shiName}ノ刻 ${kokuNames[data.kokuIdx]}`;
+    };
 
-      document.getElementById('toki-result').innerText = `${shi[idx]}の刻 ${kokuNames[kokuIdx]}`;
-      document.getElementById('bell-result').innerText = `時の鐘：${bellCounts[idx]}つ`;
+    /**
+     * 時の鐘の代わりに「日の出・日の入りの前後」を表示するレンダラー
+     */
+    const SunlightFormatter = (data) => {
+      switch (data.shiName) {
+        case "卯":
+          return "東雲の刻";
+
+        case "辰":
+        case "巳":
+          return "朝ぼらけ";
+
+        case "午":
+        case "未":
+          return "白日の下";
+
+        case "申":
+          return "夕映え時";
+
+        case "酉":
+          return "誰そ彼時";
+
+        case "戌":
+          return "宵の口";
+
+        case "亥":
+        case "子":
+          return "夜半過ぎ";
+
+        case "丑":
+          return "鬼門刻";
+
+        case "寅":
+          return "暁近し";
+
+        default:
+          return "";
+      }
+    };
+    function update() {
+      // エンジンからデータを取得
+      const data = getTokiData(35.44, 139.63);
+
+      // UIの更新
+      document.getElementById('toki-result').innerText = TokiFormatter(data);
+
+      // bell-result を SunlightFormatter で上書き更新
+      document.getElementById('bell-result').innerText = SunlightFormatter(data);
     }
 
-    // 最初に実行
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          document.getElementById('location-name').innerText = "現在地";
-          const { latitude, longitude } = pos.coords;
-          update(latitude, longitude);
-          setInterval(() => update(latitude, longitude), 10000);
-        },
-        () => {
-          document.getElementById('location-name').innerText = "江戸両国";
-          update(35.69, 139.79);
-          setInterval(() => update(35.69, 139.79), 10000);
-        }
-      );
-    } else {
-      update(35.69, 139.79);
-      setInterval(() => update(35.69, 139.79), 10000);
-    }
+
+    setInterval(update, 1000);
+    update();
   </script>
+
 </body>
 
 </html>
