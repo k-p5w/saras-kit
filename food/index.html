@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food-1グランプリ</title>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-V6BSN44CQV"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-V6BSN44CQV');
+    </script>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f9f9f9;
+            color: #333;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+        }
+
+        /* カード共通 */
+        .card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        /* プリセット選択エリア */
+        .preset-area {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f1f3f5;
+            border-radius: 6px;
+        }
+
+        .preset-title {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .btn-preset {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-preset:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-preset.active {
+            background: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-sub {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* エントリー編集エリア */
+        .input-group {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 8px;
+            font-size: 0.9rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .btn-add {
+            padding: 8px 12px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .food-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 8px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+
+        .tag {
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            color: #888;
+            font-weight: bold;
+        }
+
+        .tag-remove:hover {
+            color: #d32f2f;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* 設定セクション */
+        .settings-area {
+            border-top: 1px solid #eee;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-size: 0.9rem;
+            text-align: center;
+            color: #666;
+        }
+
+        .settings-area label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        /* グループ抽選結果画面 */
+        .groups-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .group-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .group-box h3 {
+            font-size: 0.95rem;
+            margin: 0 0 5px 0;
+            color: #d32f2f;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 3px;
+        }
+
+        .group-box ul {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        /* 対戦画面 */
+        .stage-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #d32f2f;
+            margin-bottom: 5px;
+        }
+
+        .progress {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .vs-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn-food {
+            flex: 1;
+            padding: 25px 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: #fff;
+            border: 2px solid #333;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #333;
+        }
+
+        .btn-food:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        /* 画面切り替え用 */
+        .screen {
+            display: none;
+        }
+
+        .active-screen {
+            display: block;
+        }
+
+        /* NEW! ド派手結果画面の装飾 */
+        .result-screen h1.final-title {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 0;
+        }
+
+        .result-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .result-card h2.ranking-title {
+            font-size: 1.3rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        /* TOP3 (h1, h2, h3) */
+        .top1-gold {
+            font-size: 3rem;
+            margin: 0 0 10px 0;
+            color: #b59410;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .top1-gold::before {
+            content: "🥇 1位 ";
+            font-size: 1.5rem;
+            display: block;
+            color: #888;
+        }
+
+        .top2-silver {
+            font-size: 2.2rem;
+            margin: 0 0 10px 0;
+            color: #808080;
+        }
+
+        .top2-silver::before {
+            content: "🥈 2位 ";
+            font-size: 1.2rem;
+            display: block;
+            color: #888;
+        }
+
+        .top3-bronze {
+            font-size: 1.8rem;
+            margin: 0 0 15px 0;
+            color: #a0522d;
+        }
+
+        .top3-bronze::before {
+            content: "🥉 3位 ";
+            font-size: 1.1rem;
+            display: block;
+            color: #888;
+        }
+
+        /* 4位, 5位 */
+        .other-rank {
+            font-size: 1rem;
+            color: #555;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🏆 ごはんグランプリ 🏆</h1>
+
+    <div id="setupScreen" class="card screen active-screen">
+        <h2>1. 出場ごはんのエントリー (現在: <span id="entryCount">0</span>品)</h2>
+
+        <!-- プリセット選択 UI -->
+        <div class="preset-area">
+            <div class="preset-title">⚡ ジャンル別プリセット</div>
+            <div class="preset-buttons" id="presetContainer"></div>
+            <div class="control-buttons">
+                <button class="btn-sub" onclick="selectAllPresets()">全選択</button>
+                <button class="btn-sub" onclick="clearAllFoods()">すべてクリア</button>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="newFoodInput" placeholder="新しいごはんを入力" onkeydown="if(event.key==='Enter') addFood()">
+            <button class="btn-add" onclick="addFood()">追加</button>
+        </div>
+
+        <button class="btn-action" onclick="generateGroups()">グループ組み合わせ決定！</button>
+        <div class="food-tags" id="foodTags"></div>
+    </div>
+
+    <div id="groupViewScreen" class="card screen">
+        <h2>🎲 予選グループ決定！ 🎲</h2>
+        <div id="groupsGrid" class="groups-grid"></div>
+
+        <div class="settings-area">
+            <label>
+                <input type="checkbox" id="skipMatchesCheck" checked>
+                消化試合を自動で短縮する（推奨）
+            </label>
+        </div>
+
+        <button class="btn-action" style="margin-top:10px;" onclick="startTournament()">グランプリ開幕！🔥</button>
+    </div>
+
+    <div id="gameScreen" class="screen">
+        <div class="stage-title" id="stageTitle">予選</div>
+        <div class="progress" id="progressText">第 1 / 15 戦</div>
+
+        <div class="vs-container">
+            <button id="btnA" class="btn-food" onclick="vote(1)"></button>
+            <span style="font-weight:bold; color:#888;">VS</span>
+            <button id="btnB" class="btn-food" onclick="vote(0)"></button>
+        </div>
+
+        <button style="width:100%; padding:10px; background:#e0e0e0; border:none; border-radius:6px; cursor:pointer;"
+            onclick="vote(0.5)">引き分け（どっちも好き）</button>
+    </div>
+
+    <div id="resultScreen" class="result-screen screen">
+        <h1 class="final-title">🎉 全日程終了！ 🎉</h1>
+        <p style="margin-bottom: 20px; color:#666;">栄えある「殿堂入りごはん」が決定しました。</p>
+
+        <div class="result-card">
+            <h2 class="ranking-title">🏆 最終順位（TOP5） 🏆</h2>
+
+            <h1 id="rank1" class="top1-gold">1位の料理</h1>
+            <h2 id="rank2" class="top2-silver">2位の料理</h2>
+            <h3 id="rank3" class="top3-bronze">3位の料理</h3>
+
+            <p id="rank4" class="other-rank">4位: 料理</p>
+            <p id="rank5" class="other-rank">5位: 料理</p>
+        </div>
+
+        <button class="btn-action" style="background:#333;" onclick="showScreen('setupScreen')">エントリー画面に戻る</button>
+    </div>
+
+    <script>
+        // カテゴリ別にプリセット化
+        const foodPresets = {
+            "🍚 丼・ご飯": ["カレーライス", "ハヤシライス", "オムライス", "親子丼", "牛丼", "カツ丼", "天丼", "海鮮丼", "豚丼", "天津飯", "チャーハン", "中華丼", "ガパオライス"],
+            "🍜 ラーメン・麺": ["醤油ラーメン", "味噌ラーメン", "塩ラーメン", "豚骨ラーメン", "家系ラーメン", "担々麺", "つけ麺", "油そば", "ざるそば", "かけそば", "天ぷらそば", "きつねうどん", "カレーうどん", "肉うどん", "ぶっかけうどん", "焼きそば", "ソース焼きそば", "塩焼きそば", "そうめん", "冷やし中華"],
+            "🍝 パスタ": ["ナポリタン", "ミートソースパスタ", "カルボナーラ", "ペペロンチーノ", "たらこパスタ", "明太子パスタ", "ボンゴレビアンコ", "ペスカトーレ", "ジェノベーゼ", "きのこクリームパスタ"],
+            "🥟 中華": ["餃子", "麻婆豆腐", "酢豚", "回鍋肉", "青椒肉絲", "エビチリ", "八宝菜", "油淋鶏", "春巻き", "肉まん"],
+            "🍱 和食・揚げ物": ["刺身", "寿司", "天ぷら", "焼き魚", "煮魚", "鯖の味噌煮", "肉じゃが", "筑前煮", "生姜焼き", "唐揚げ", "とんかつ", "コロッケ"],
+            "🍲 鍋物": ["寄せ鍋", "ちゃんこ鍋", "キムチ鍋", "もつ鍋", "水炊き", "豆乳鍋", "味噌鍋", "カレー鍋", "すき焼き", "しゃぶしゃぶ", "湯豆腐"],
+            "🥩 洋食・肉": ["ステーキ", "ハンバーグ", "ロールキャベツ", "グラタン", "ドリア", "クリームシチュー", "ビーフシチュー", "焼肉", "ジンギスカン"],
+            "🍕 軽食・粉もの": ["お好み焼き", "たこ焼き", "ピザ", "サンドイッチ", "ハンバーガー", "フレンチトースト", "ホットサンド"]
+        };
+
+        // 初期選択状態（デフォルトで定番の「丼・ご飯」と「ラーメン・麺」を選択）
+        let activeCategories = new Set(["🍚 丼・ご飯", "🍜 ラーメン・麺"]);
+        let customFoodList = [];
+
+        let currentGroupIndex = 0;
+        let currentMatches = [];
+        let currentMatchIndex = 0;
+        let currentGroupFoods = [];
+        let finalists = [];
+        let groupsData = [];
+        let isSkipMode = true;
+
+        // プリセットボタン描画
+        function renderPresets() {
+            const container = document.getElementById("presetContainer");
+            container.innerHTML = "";
+            Object.keys(foodPresets).forEach(cat => {
+                const btn = document.createElement("button");
+                btn.className = `btn-preset ${activeCategories.has(cat) ? 'active' : ''}`;
+                btn.innerText = cat;
+                btn.onclick = () => toggleCategory(cat);
+                container.appendChild(btn);
+            });
+        }
+
+        // カテゴリの切替
+        function toggleCategory(cat) {
+            if (activeCategories.has(cat)) {
+                activeCategories.delete(cat);
+            } else {
+                activeCategories.add(cat);
+            }
+            updateCustomListFromPresets();
+        }
+
+        function selectAllPresets() {
+            Object.keys(foodPresets).forEach(cat => activeCategories.add(cat));
+            updateCustomListFromPresets();
+        }
+
+        function clearAllFoods() {
+            activeCategories.clear();
+            customFoodList = [];
+            renderPresets();
+            renderTags();
+        }
+
+        // 選択中のプリセットからリストを再構築（手動追加分は維持）
+        function updateCustomListFromPresets() {
+            const presetFoods = new Set();
+            activeCategories.forEach(cat => {
+                foodPresets[cat].forEach(food => presetFoods.add(food));
+            });
+
+            // 手動追加された料理（どのプリセットにも属さないもの）を維持
+            const allPresetFoods = Object.values(foodPresets).flat();
+            const userAdded = customFoodList.filter(f => !allPresetFoods.includes(f));
+
+            customFoodList = Array.from(new Set([...presetFoods, ...userAdded]));
+            renderPresets();
+            renderTags();
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById(screenId).classList.add('active-screen');
+        }
+
+        function renderTags() {
+            const container = document.getElementById("foodTags");
+            container.innerHTML = "";
+            customFoodList.forEach((food, idx) => {
+                const tag = document.createElement("div");
+                tag.className = "tag";
+                tag.innerHTML = `${food} <span class="tag-remove" onclick="removeFood(${idx})">×</span>`;
+                container.appendChild(tag);
+            });
+            document.getElementById("entryCount").innerText = customFoodList.length;
+        }
+
+        function addFood() {
+            const input = document.getElementById("newFoodInput");
+            const name = input.value.trim();
+            if (name && !customFoodList.includes(name)) {
+                customFoodList.push(name);
+                input.value = "";
+                renderTags();
+            }
+        }
+
+        function removeFood(index) {
+            customFoodList.splice(index, 1);
+            renderTags();
+        }
+
+        function generateGroups() {
+            if (customFoodList.length < 4) {
+                alert("最低4つのごはんが必要です！プリセットを選択するか料理を追加してください。");
+                return;
+            }
+
+            const shuffled = [...customFoodList].sort(() => Math.random() - 0.5);
+            const IDEAL_PER_GROUP = 6;
+            const groupCount = Math.max(2, Math.ceil(shuffled.length / IDEAL_PER_GROUP));
+
+            groupsData = [];
+            for (let i = 0; i < groupCount; i++) {
+                let groupName = "";
+                let n = i;
+                do {
+                    groupName = String.fromCharCode(65 + (n % 26)) + groupName;
+                    n = Math.floor(n / 26) - 1;
+                } while (n >= 0);
+
+                groupsData.push({
+                    name: `予選グループ ${groupName}`,
+                    foods: []
+                });
+            }
+
+            shuffled.forEach((food, idx) => {
+                groupsData[idx % groupCount].foods.push(food);
+            });
+
+            const grid = document.getElementById("groupsGrid");
+            grid.innerHTML = "";
+            groupsData.forEach(g => {
+                const box = document.createElement("div");
+                box.className = "group-box";
+                const items = g.foods.map(f => `<li>${f}</li>`).join("");
+                box.innerHTML = `<h3>${g.name}</h3><ul>${items}</ul>`;
+                grid.appendChild(box);
+            });
+
+            showScreen("groupViewScreen");
+        }
+
+        function startTournament() {
+            isSkipMode = document.getElementById("skipMatchesCheck").checked;
+            currentGroupIndex = 0;
+            finalists = [];
+            showScreen("gameScreen");
+            startGroup(currentGroupIndex);
+        }
+
+        function startGroup(index) {
+            let groupName = "";
+            let foodNames = [];
+
+            if (index < groupsData.length) {
+                groupName = groupsData[index].name;
+                foodNames = groupsData[index].foods;
+            } else {
+                groupName = "👑 決勝グランプリ 👑";
+                foodNames = finalists;
+            }
+
+            document.getElementById("stageTitle").innerText = groupName;
+            currentGroupFoods = foodNames.map(name => ({
+                name: name,
+                rating: 1500,
+                wins: 0,
+                losses: 0,
+                finished: false
+            }));
+
+            currentMatches = [];
+            for (let i = 0; i < currentGroupFoods.length; i++) {
+                for (let j = i + 1; j < currentGroupFoods.length; j++) {
+                    currentMatches.push([currentGroupFoods[i], currentGroupFoods[j]]);
+                }
+            }
+            currentMatches.sort(() => Math.random() - 0.5);
+            currentMatchIndex = 0;
+
+            showMatch();
+        }
+
+        function showMatch() {
+            if (currentMatchIndex >= currentMatches.length) {
+                finishGroup();
+                return;
+            }
+
+            const match = currentMatches[currentMatchIndex];
+
+            if (isSkipMode && (match[0].finished || match[1].finished)) {
+                currentMatchIndex++;
+                showMatch();
+                return;
+            }
+
+            document.getElementById("btnA").innerText = match[0].name;
+            document.getElementById("btnB").innerText = match[1].name;
+
+            const total = isSkipMode ? "進行中" : currentMatches.length;
+            document.getElementById("progressText").innerText = `判定中... (${currentMatchIndex + 1} / ${total})`;
+        }
+
+        function vote(score) {
+            const match = currentMatches[currentMatchIndex];
+            const a = match[0];
+            const b = match[1];
+
+            if (score === 1) { a.wins++; b.losses++; a.rating += 32; b.rating -= 16; }
+            else if (score === 0) { b.wins++; a.losses++; b.rating += 32; a.rating -= 16; }
+            else { a.rating += 5; b.rating += 5; }
+
+            if (isSkipMode) {
+                if (a.losses >= 2) a.finished = true;
+                if (b.losses >= 2) b.finished = true;
+                if (a.wins >= 2) a.finished = true;
+                if (b.wins >= 2) b.finished = true;
+            }
+
+            currentMatchIndex++;
+            showMatch();
+        }
+
+        function finishGroup() {
+            const sorted = [...currentGroupFoods].sort((a, b) => b.rating - a.rating);
+
+            if (currentGroupIndex < groupsData.length) {
+                const winners = sorted.slice(0, 2).map(f => f.name);
+                finalists.push(...winners);
+
+                currentGroupIndex++;
+                startGroup(currentGroupIndex);
+            } else {
+                showFinalResult(sorted);
+            }
+        }
+
+        function showFinalResult(sortedFinalists) {
+            showScreen("resultScreen");
+
+            const data = sortedFinalists;
+
+            const r1 = document.getElementById("rank1");
+            r1.innerText = data[0] ? data[0].name : "---";
+
+            const r2 = document.getElementById("rank2");
+            r2.innerText = data[1] ? data[1].name : "---";
+
+            const r3 = document.getElementById("rank3");
+            r3.innerText = data[2] ? data[2].name : "---";
+
+            const r4 = document.getElementById("rank4");
+            r4.innerText = data[3] ? `4位: ${data[3].name}` : "4位: ---";
+
+            const r5 = document.getElementById("rank5");
+            r5.innerText = data[4] ? `5位: ${data[4].name}` : "5位: ---";
+        }
+
+        // 初期化実行
+        updateCustomListFromPresets();
+    </script>
+
+</body>
+
+</html>

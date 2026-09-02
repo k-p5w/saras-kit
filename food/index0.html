@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>最強ごはん決定戦 (Best Food Versus)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9f9f9;
+      color: #333;
+      text-align: center;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .progress { font-size: 0.9rem; color: #666; margin-bottom: 15px; }
+    .vs-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .btn-food {
+      flex: 1;
+      padding: 25px 10px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      background: #ffffff;
+      border: 2px solid #333;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #333;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .btn-food:active {
+      transform: translateY(4px);
+      box-shadow: none;
+    }
+    .vs-text { font-weight: bold; color: #888; }
+    .btn-draw {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      background: #e0e0e0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #555;
+      margin-bottom: 20px;
+    }
+    .btn-draw:hover { background: #d5d5d5; }
+    .ranking {
+      text-align: left;
+      background: #fff;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .ranking h2 { font-size: 1.1rem; margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 5px; }
+    .ranking ol { padding-left: 20px; margin: 0; }
+    .ranking li { margin-bottom: 6px; font-weight: bold; }
+    .result-screen { display: none; }
+    .btn-restart {
+      padding: 12px 24px;
+      font-size: 1rem;
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 対戦画面 -->
+  <div id="gameScreen">
+    <h1>どっちが好き？</h1>
+    <div class="progress" id="progressText">第 1 / 45 戦</div>
+
+    <div class="vs-container">
+      <button id="btnA" class="btn-food" onclick="vote(1)"></button>
+      <span class="vs-text">VS</span>
+      <button id="btnB" class="btn-food" onclick="vote(0)"></button>
+    </div>
+
+    <button class="btn-draw" onclick="vote(0.5)">引き分け（両方好き！）</button>
+  </div>
+
+  <!-- 最終結果画面（最初は非表示） -->
+  <div id="resultScreen" class="result-screen">
+    <h1>🎉 全対戦完了！ 🎉</h1>
+    <p>あなたの本当の「好きなごはん順位」が決定しました。</p>
+    
+    <div class="ranking">
+      <h2>最終ランキング</h2>
+      <ol id="finalRankingList"></ol>
+    </div>
+
+    <button class="btn-restart" onclick="initGame()">もう一度やり直す</button>
+  </div>
+
+  <script>
+const foodList = [
+    // ごはん・丼
+    "カレーライス",
+    "親子丼",
+    "牛丼",
+    "カツ丼",
+    "天丼",
+    "チャーハン",
+    "オムライス",
+
+    // 麺
+    "ラーメン",
+    "そば",
+    "うどん",
+    "パスタ",
+    "焼きそば",
+    "そうめん",
+
+    // 中華
+    "餃子",
+    "麻婆豆腐",
+    "酢豚",
+    "回鍋肉",
+    "青椒肉絲",
+    "天津飯",
+
+    // 和食
+    "刺身",
+    "寿司",
+    "天ぷら",
+    "焼き魚",
+    "唐揚げ",
+    "とんかつ",
+    "肉じゃが",
+
+    // 洋食・肉
+    "ステーキ",
+    "ハンバーグ",
+    "グラタン",
+    "ドリア",
+    "クリームシチュー",
+    "ビーフシチュー",
+
+    // その他
+    "お好み焼き",
+    "たこ焼き",
+    "ピザ",
+    "サンドイッチ",
+    "ハンバーガー",
+    "生姜焼き",
+    "鍋",
+    "しゃぶしゃぶ",
+    "焼肉"
+];
+
+    let foods = [];
+    let matches = []; // 全組み合わせを保持する配列
+    let currentMatchIndex = 0;
+
+    // ゲームの初期化
+    function initGame() {
+      // 料理データ生成
+      foods = foodList.map(name => ({ name: name, rating: 1500 }));
+      matches = [];
+
+      // 全組み合わせ（総当たり）のペアを作る
+      for (let i = 0; i < foods.length; i++) {
+        for (let j = i + 1; j < foods.length; j++) {
+          matches.push([foods[i], foods[j]]);
+        }
+      }
+
+      // 組み合わせの順番をシャッフル（同じ料理が連投されにくくする）
+      matches.sort(() => Math.random() - 0.5);
+
+      currentMatchIndex = 0;
+      document.getElementById("gameScreen").style.display = "block";
+      document.getElementById("resultScreen").style.display = "none";
+
+      showMatch();
+    }
+
+    // 対戦カードの表示
+    function showMatch() {
+      if (currentMatchIndex >= matches.length) {
+        showFinalResult();
+        return;
+      }
+
+      const match = matches[currentMatchIndex];
+      document.getElementById("btnA").innerText = match[0].name;
+      document.getElementById("btnB").innerText = match[1].name;
+      document.getElementById("progressText").innerText = 
+        `第 ${currentMatchIndex + 1} / ${matches.length} 戦`;
+    }
+
+    // 投票処理（イロレーティング）
+    function vote(score) {
+      const match = matches[currentMatchIndex];
+      const currentA = match[0];
+      const currentB = match[1];
+
+      const K = 32;
+      const expectedA = 1 / (1 + Math.pow(10, (currentB.rating - currentA.rating) / 400));
+      const expectedB = 1 - expectedA;
+
+      currentA.rating += K * (score - expectedA);
+      currentB.rating += K * ((1 - score) - expectedB);
+
+      currentMatchIndex++;
+      showMatch();
+    }
+
+    // 最終結果の表示
+    function showFinalResult() {
+      document.getElementById("gameScreen").style.display = "none";
+      document.getElementById("resultScreen").style.display = "block";
+
+      const sorted = [...foods].sort((a, b) => b.rating - a.rating);
+      const listEl = document.getElementById("finalRankingList");
+      listEl.innerHTML = "";
+
+      sorted.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.innerText = `${item.name} (${Math.round(item.rating)} pt)`;
+        listEl.appendChild(li);
+      });
+    }
+
+    // 起動時
+    initGame();
+  </script>
+
+</body>
+</html>
