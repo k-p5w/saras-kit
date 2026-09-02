@@ -430,9 +430,9 @@
         <button class="btn-action" style="background:#333;" onclick="showScreen('setupScreen')">エントリー画面に戻る</button>
     </div>
 
-    <!-- 延長サドンデス画面 -->
+    <!-- 延長最終決戦画面 -->
     <div id="suddenDeathScreen" class="screen">
-        <div class="stage-title" style="font-size: 1.4rem; color: #d32f2f;">🔥 延長サドンデス（決定戦） 🔥</div>
+        <div class="stage-title" style="font-size: 1.4rem; color: #d32f2f;">🔥 延長戦（最終決戦） 🔥</div>
         <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">1位が完全同点！最後の1本勝負で真の王者を決めろ！</p>
 
         <div class="vs-container">
@@ -674,7 +674,7 @@
             showMatch();
         }
 
-        // サドンデス管理用の変数
+        // 最終決戦管理用の変数
         let suddenDeathGroup = [];   // 同率1位の料理リスト
         let fullTournamentList = []; // 全体リスト
 
@@ -704,7 +704,7 @@
                 );
 
                 if (topCandidates.length >= 2) {
-                    // 同率1位が複数いたら、そのグループを固定してサドンデス開始！
+                    // 同率1位が複数いたら、そのグループを固定して最終決戦開始！
                     suddenDeathGroup = [...topCandidates];
                     runNextSuddenDeathMatch();
                 } else {
@@ -714,7 +714,7 @@
             }
         }
 
-        // サドンデス対戦の進行管理
+        // 最終決戦対戦の進行管理
         function runNextSuddenDeathMatch() {
             // 同点グループが残り1人になったら「完全優勝」！
             if (suddenDeathGroup.length === 1) {
@@ -746,10 +746,10 @@
 
         // 1試合ごとの勝敗処理（敗者ノックアウト方式）
         function resolveSuddenMatch(winner, loser) {
-            // 敗者をサドンデスグループから除外する（勝ち抜き）
+            // 敗者を最終決戦グループから除外する（勝ち抜き）
             suddenDeathGroup = suddenDeathGroup.filter(f => f.name !== loser.name);
 
-            // 次のサドンデス対戦へ（残り1人になるまで続く）
+            // 次の最終決戦対戦へ（残り1人になるまで続く）
             runNextSuddenDeathMatch();
         }
         // 表示切替用関数
