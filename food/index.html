@@ -365,7 +365,7 @@
             <button class="btn-add" onclick="addFood()">追加</button>
         </div>
 
-        <button class="btn-action" onclick="generateGroups()">グループ組み合わせ決定！</button>
+        <button class="btn-action" onclick="generateGroups()">グループ組み合わせ決定（エントリー完了！）</button>
         <div class="food-tags" id="foodTags"></div>
     </div>
 
@@ -401,7 +401,16 @@
         <h1 class="final-title">🎉 全日程終了！ 🎉</h1>
         <p style="margin-bottom: 20px; color:#666;">栄えある「殿堂入りごはん」が決定しました。</p>
 
-        <div class="result-card">
+        <!-- 表示切り替えボタン -->
+        <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;">
+            <button id="btnViewTop5" class="btn-sub" style="padding: 8px 16px; font-weight: bold;"
+                onclick="toggleRankView('top5')">🏆 TOP5 表示</button>
+            <button id="btnViewAll" class="btn-sub" style="padding: 8px 16px; font-weight: bold; background: #bbb;"
+                onclick="toggleRankView('all')">📊 全ランキング表示</button>
+        </div>
+
+        <!-- TOP5カード表示 -->
+        <div id="top5View" class="result-card">
             <h2 class="ranking-title">🏆 最終順位（TOP5） 🏆</h2>
 
             <h1 id="rank1" class="top1-gold">1位の料理</h1>
@@ -412,20 +421,38 @@
             <p id="rank5" class="other-rank">5位: 料理</p>
         </div>
 
+        <!-- 全順位リスト表示（初期状態は非表示） -->
+        <div id="allRankView" class="result-card" style="display: none; text-align: left;">
+            <h2 class="ranking-title" style="text-align: center;">📊 最終全順位リスト 📊</h2>
+            <div id="allRankList" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+
         <button class="btn-action" style="background:#333;" onclick="showScreen('setupScreen')">エントリー画面に戻る</button>
+    </div>
+
+    <!-- 延長サドンデス画面 -->
+    <div id="suddenDeathScreen" class="screen">
+        <div class="stage-title" style="font-size: 1.4rem; color: #d32f2f;">🔥 延長サドンデス（決定戦） 🔥</div>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">1位が完全同点！最後の1本勝負で真の王者を決めろ！</p>
+
+        <div class="vs-container">
+            <button id="btnSuddenA" class="btn-food" style="background: #fff3cd; border-color: #d32f2f;"></button>
+            <span style="font-weight:bold; color:#d32f2f; font-size: 1.2rem;">VS</span>
+            <button id="btnSuddenB" class="btn-food" style="background: #fff3cd; border-color: #d32f2f;"></button>
+        </div>
     </div>
 
     <script>
         // カテゴリ別にプリセット化
         const foodPresets = {
-            "🍚 丼・ご飯": ["カレーライス", "ハヤシライス", "オムライス", "親子丼", "牛丼", "カツ丼", "天丼", "海鮮丼", "豚丼", "天津飯", "チャーハン", "中華丼", "ガパオライス"],
-            "🍜 ラーメン・麺": ["醤油ラーメン", "味噌ラーメン", "塩ラーメン", "豚骨ラーメン", "家系ラーメン", "担々麺", "つけ麺", "油そば", "ざるそば", "かけそば", "天ぷらそば", "きつねうどん", "カレーうどん", "肉うどん", "ぶっかけうどん", "焼きそば", "ソース焼きそば", "塩焼きそば", "そうめん", "冷やし中華"],
+            "🍚 丼・ご飯": ["カレーライス", "カツカレー", "ハヤシライス", "オムライス", "親子丼", "牛丼", "カツ丼", "天丼", "海鮮丼", "豚丼", "天津飯", "チャーハン", "中華丼", "ガパオライス"],
+            "🍜 ラーメン・麺": ["醤油ラーメン", "味噌ラーメン", "塩ラーメン", "豚骨ラーメン", "家系ラーメン", "担々麺", "つけ麺", "油そば", "ざるそば", "かけそば", "天ぷらそば", "きつねうどん", "カレーうどん", "肉うどん", "ぶっかけうどん", "天ぷらうどん", "山菜そば", "ソース焼きそば", "塩焼きそば", "そうめん", "冷やし中華"],
             "🍝 パスタ": ["ナポリタン", "ミートソースパスタ", "カルボナーラ", "ペペロンチーノ", "たらこパスタ", "明太子パスタ", "ボンゴレビアンコ", "ペスカトーレ", "ジェノベーゼ", "きのこクリームパスタ"],
             "🥟 中華": ["餃子", "麻婆豆腐", "酢豚", "回鍋肉", "青椒肉絲", "エビチリ", "八宝菜", "油淋鶏", "春巻き", "肉まん"],
             "🍱 和食・揚げ物": ["刺身", "寿司", "天ぷら", "焼き魚", "煮魚", "鯖の味噌煮", "肉じゃが", "筑前煮", "生姜焼き", "唐揚げ", "とんかつ", "コロッケ"],
-            "🍲 鍋物": ["寄せ鍋", "ちゃんこ鍋", "キムチ鍋", "もつ鍋", "水炊き", "豆乳鍋", "味噌鍋", "カレー鍋", "すき焼き", "しゃぶしゃぶ", "湯豆腐"],
-            "🥩 洋食・肉": ["ステーキ", "ハンバーグ", "ロールキャベツ", "グラタン", "ドリア", "クリームシチュー", "ビーフシチュー", "焼肉", "ジンギスカン"],
-            "🍕 軽食・粉もの": ["お好み焼き", "たこ焼き", "ピザ", "サンドイッチ", "ハンバーガー", "フレンチトースト", "ホットサンド"]
+            "🍲 鍋物": ["寄せ鍋", "ちゃんこ鍋", "キムチ鍋", "もつ鍋", "水炊き", "豆乳鍋", "味噌鍋", "カレー鍋", "すき焼き", "しゃぶしゃぶ", "湯豆腐", "おでん"],
+            "🥩 洋食・肉": ["ステーキ", "ハンバーグ", "ロールキャベツ", "グラタン", "ラザニア", "ドリア", "クリームシチュー", "ビーフシチュー", "焼肉", "ジンギスカン", "チキン南蛮"],
+            "🍕 軽食・粉もの": ["お好み焼き", "たこ焼き", "ピザ", "サンドイッチ", "ハンバーガー", "フレンチトースト", "ホットサンド", "もんじゃ"]
         };
 
         // 初期選択状態（デフォルトで定番の「丼・ご飯」と「ラーメン・麺」を選択）
@@ -647,8 +674,16 @@
             showMatch();
         }
 
+        // サドンデス管理用の変数
+        let suddenDeathGroup = [];   // 同率1位の料理リスト
+        let fullTournamentList = []; // 全体リスト
+
         function finishGroup() {
-            const sorted = [...currentGroupFoods].sort((a, b) => b.rating - a.rating);
+            const sorted = [...currentGroupFoods].sort((a, b) => {
+                if (b.rating !== a.rating) return b.rating - a.rating;
+                if (b.wins !== a.wins) return b.wins - a.wins;
+                return a.losses - b.losses;
+            });
 
             if (currentGroupIndex < groupsData.length) {
                 const winners = sorted.slice(0, 2).map(f => f.name);
@@ -657,7 +692,83 @@
                 currentGroupIndex++;
                 startGroup(currentGroupIndex);
             } else {
-                showFinalResult(sorted);
+                // 👑 決勝グランプリ終了時の判定
+                fullTournamentList = sorted;
+                const top1 = sorted[0];
+
+                // 1位と全く同じ成績のメンバーを抽出
+                const topCandidates = sorted.filter(f =>
+                    f.rating === top1.rating &&
+                    f.wins === top1.wins &&
+                    f.losses === top1.losses
+                );
+
+                if (topCandidates.length >= 2) {
+                    // 同率1位が複数いたら、そのグループを固定してサドンデス開始！
+                    suddenDeathGroup = [...topCandidates];
+                    runNextSuddenDeathMatch();
+                } else {
+                    // 単独1位ならそのまま結果表示
+                    showFinalResult(sorted);
+                }
+            }
+        }
+
+        // サドンデス対戦の進行管理
+        function runNextSuddenDeathMatch() {
+            // 同点グループが残り1人になったら「完全優勝」！
+            if (suddenDeathGroup.length === 1) {
+                // 勝者に最終的なptボーナスを与えて単独1位にする
+                suddenDeathGroup[0].rating += 1;
+
+                // 全体リストを最終ソートして結果画面へ
+                const finalSorted = [...fullTournamentList].sort((a, b) => {
+                    if (b.rating !== a.rating) return b.rating - a.rating;
+                    if (b.wins !== a.wins) return b.wins - a.wins;
+                    return a.losses - b.losses;
+                });
+                showFinalResult(finalSorted);
+                return;
+            }
+
+            // まだ2人以上残っている場合：先頭の2人を対決させる
+            const foodA = suddenDeathGroup[0];
+            const foodB = suddenDeathGroup[1];
+
+            document.getElementById("btnSuddenA").innerText = foodA.name;
+            document.getElementById("btnSuddenA").onclick = () => resolveSuddenMatch(foodA, foodB);
+
+            document.getElementById("btnSuddenB").innerText = foodB.name;
+            document.getElementById("btnSuddenB").onclick = () => resolveSuddenMatch(foodB, foodA);
+
+            showScreen("suddenDeathScreen");
+        }
+
+        // 1試合ごとの勝敗処理（敗者ノックアウト方式）
+        function resolveSuddenMatch(winner, loser) {
+            // 敗者をサドンデスグループから除外する（勝ち抜き）
+            suddenDeathGroup = suddenDeathGroup.filter(f => f.name !== loser.name);
+
+            // 次のサドンデス対戦へ（残り1人になるまで続く）
+            runNextSuddenDeathMatch();
+        }
+        // 表示切替用関数
+        function toggleRankView(viewType) {
+            const top5View = document.getElementById("top5View");
+            const allRankView = document.getElementById("allRankView");
+            const btnTop5 = document.getElementById("btnViewTop5");
+            const btnAll = document.getElementById("btnViewAll");
+
+            if (viewType === 'top5') {
+                top5View.style.display = "block";
+                allRankView.style.display = "none";
+                btnTop5.style.background = "#6c757d";
+                btnAll.style.background = "#bbb";
+            } else {
+                top5View.style.display = "none";
+                allRankView.style.display = "block";
+                btnTop5.style.background = "#bbb";
+                btnAll.style.background = "#6c757d";
             }
         }
 
@@ -666,20 +777,76 @@
 
             const data = sortedFinalists;
 
-            const r1 = document.getElementById("rank1");
-            r1.innerText = data[0] ? data[0].name : "---";
+            // --- 1. TOP5 表示（同点に対応した順位計算） ---
+            // 各要素の「何位か」を算出する（例: 自分より高いスコアの人数 + 1）
+            const getRankText = (index) => {
+                if (!data[index]) return "---";
 
-            const r2 = document.getElementById("rank2");
-            r2.innerText = data[1] ? data[1].name : "---";
+                // 自分と同じスコア（pt・勝・敗がすべて一致）の最初のインデックスを探す
+                const firstIndex = data.findIndex(item =>
+                    item.rating === data[index].rating &&
+                    item.wins === data[index].wins &&
+                    item.losses === data[index].losses
+                );
 
-            const r3 = document.getElementById("rank3");
-            r3.innerText = data[2] ? data[2].name : "---";
+                // タイ順位（同じスコアなら同じ順位、例: 1位が2つなら次が3位）
+                const rank = firstIndex + 1;
 
-            const r4 = document.getElementById("rank4");
-            r4.innerText = data[3] ? `4位: ${data[3].name}` : "4位: ---";
+                if (index === 0 || index === 1 || index === 2) {
+                    // 上位3つはメダル付きで表示
+                    const medals = ["🥇", "🥈", "🥉"];
+                    return `${medals[rank - 1] || "🏅"} ${rank}位: ${data[index].name}`;
+                } else {
+                    return `${rank}位: ${data[index].name}`;
+                }
+            };
 
-            const r5 = document.getElementById("rank5");
-            r5.innerText = data[4] ? `5位: ${data[4].name}` : "5位: ---";
+            // DOMに反映（TOP5のテキストを直接書き換え）
+            document.getElementById("rank1").innerText = data[0] ? data[0].name : "---";
+            // ※1位の見た目（ゴールドの大きな文字）を活かすため、ランク1だけは名前のみにしつつ、必要ならCSSやラベルを調整可能
+            // ここではシンプルに料理名を表示
+            if (data[0]) document.getElementById("rank1").innerText = data[0].name;
+            if (data[1]) document.getElementById("rank2").innerText = data[1].name;
+            if (data[2]) document.getElementById("rank3").innerText = data[2].name;
+
+            document.getElementById("rank4").innerText = data[3] ? `${getActualRank(3, data)}位: ${data[3].name}` : "4位: ---";
+            document.getElementById("rank5").innerText = data[4] ? `${getActualRank(4, data)}位: ${data[4].name}` : "5位: ---";
+
+            // --- 2. 全順位リスト（同点対応の正しい順位で表示） ---
+            const listContainer = document.getElementById("allRankList");
+            listContainer.innerHTML = "";
+
+            const ol = document.createElement("ol");
+            ol.style.paddingLeft = "25px";
+            ol.style.margin = "0";
+
+            data.forEach((item, index) => {
+                // 正確な順位を計算（自分よりスコアが高い、あるいは同点のグループの先頭位置）
+                const actualRank = getActualRank(index, data);
+
+                const li = document.createElement("li");
+                li.style.padding = "6px 0";
+                li.style.borderBottom = "1px dashed #eee";
+                li.style.fontSize = "0.95rem";
+                li.innerHTML = `<strong>${actualRank}位: ${item.name}</strong> - <span style="color:#d32f2f; font-weight:bold;">${item.rating} pt</span> <span style="font-size:0.85rem; color:#666;">(${item.wins}勝 ${item.losses}敗)</span>`;
+                ol.appendChild(li);
+            });
+
+            listContainer.appendChild(ol);
+
+            // 初期状態はTOP5を表示
+            toggleRankView('top5');
+        }
+
+        // 順位（タイ対応）を計算するヘルパー関数
+        function getActualRank(index, data) {
+            if (!data[index]) return index + 1;
+            const firstIndex = data.findIndex(item =>
+                item.rating === data[index].rating &&
+                item.wins === data[index].wins &&
+                item.losses === data[index].losses
+            );
+            return firstIndex + 1;
         }
 
         // 初期化実行
