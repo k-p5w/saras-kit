@@ -293,18 +293,12 @@
         }
 
         /* TOP3 (h1, h2, h3) */
+
         .top1-gold {
             font-size: 3rem;
             margin: 0 0 10px 0;
             color: #b59410;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .top1-gold::before {
-            content: "🥇 1位 ";
-            font-size: 1.5rem;
-            display: block;
-            color: #888;
         }
 
         .top2-silver {
@@ -313,22 +307,17 @@
             color: #808080;
         }
 
-        .top2-silver::before {
-            content: "🥈 2位 ";
-            font-size: 1.2rem;
-            display: block;
-            color: #888;
-        }
-
         .top3-bronze {
             font-size: 1.8rem;
             margin: 0 0 15px 0;
             color: #a0522d;
         }
 
+        .top1-gold::before,
+        .top2-silver::before,
         .top3-bronze::before {
-            content: "🥉 3位 ";
-            font-size: 1.1rem;
+            content: attr(data-rank-label);
+            font-size: 1.2rem;
             display: block;
             color: #888;
         }
@@ -776,43 +765,59 @@
             showScreen("resultScreen");
 
             const data = sortedFinalists;
+            const medals = ["🥇", "🥈", "🥉"];
 
-            // --- 1. TOP5 表示（同点に対応した順位計算） ---
-            // 各要素の「何位か」を算出する（例: 自分より高いスコアの人数 + 1）
-            const getRankText = (index) => {
-                if (!data[index]) return "---";
+            // タイ順位に応じたメダル文字（4位以降は🏅）
+            const getMedal = (rank) => medals[rank - 1] || "🏅";
 
-                // 自分と同じスコア（pt・勝・敗がすべて一致）の最初のインデックスを探す
-                const firstIndex = data.findIndex(item =>
-                    item.rating === data[index].rating &&
-                    item.wins === data[index].wins &&
-                    item.losses === data[index].losses
-                );
-
-                // タイ順位（同じスコアなら同じ順位、例: 1位が2つなら次が3位）
-                const rank = firstIndex + 1;
-
-                if (index === 0 || index === 1 || index === 2) {
-                    // 上位3つはメダル付きで表示
-                    const medals = ["🥇", "🥈", "🥉"];
-                    return `${medals[rank - 1] || "🏅"} ${rank}位: ${data[index].name}`;
-                } else {
-                    return `${rank}位: ${data[index].name}`;
-                }
+            // 実際の順位から色を決める（枠の位置じゃなく中身の順位を見る）
+            const rankColor = (rank) => {
+                if (rank === 1) return "#b59410"; // 金
+                if (rank === 2) return "#808080"; // 銀
+                if (rank === 3) return "#a0522d"; // 銅
+                return "#333";
             };
 
-            // DOMに反映（TOP5のテキストを直接書き換え）
-            document.getElementById("rank1").innerText = data[0] ? data[0].name : "---";
-            // ※1位の見た目（ゴールドの大きな文字）を活かすため、ランク1だけは名前のみにしつつ、必要ならCSSやラベルを調整可能
-            // ここではシンプルに料理名を表示
-            if (data[0]) document.getElementById("rank1").innerText = data[0].name;
-            if (data[1]) document.getElementById("rank2").innerText = data[1].name;
-            if (data[2]) document.getElementById("rank3").innerText = data[2].name;
+            // --- 1. TOP3（メダル枠）表示：実際の順位をdata属性・色で反映 ---
+            const rank1El = document.getElementById("rank1");
+            const rank2El = document.getElementById("rank2");
+            const rank3El = document.getElementById("rank3");
 
+            if (data[0]) {
+                const r = getActualRank(0, data);
+                rank1El.innerText = data[0].name;
+                rank1El.setAttribute("data-rank-label", `${getMedal(r)} ${r}位`);
+                rank1El.style.color = rankColor(r);
+            } else {
+                rank1El.innerText = "---";
+                rank1El.setAttribute("data-rank-label", "");
+            }
+
+            if (data[1]) {
+                const r = getActualRank(1, data);
+                rank2El.innerText = data[1].name;
+                rank2El.setAttribute("data-rank-label", `${getMedal(r)} ${r}位`);
+                rank2El.style.color = rankColor(r);
+            } else {
+                rank2El.innerText = "---";
+                rank2El.setAttribute("data-rank-label", "");
+            }
+
+            if (data[2]) {
+                const r = getActualRank(2, data);
+                rank3El.innerText = data[2].name;
+                rank3El.setAttribute("data-rank-label", `${getMedal(r)} ${r}位`);
+                rank3El.style.color = rankColor(r);
+            } else {
+                rank3El.innerText = "---";
+                rank3El.setAttribute("data-rank-label", "");
+            }
+
+            // --- 2. 4位・5位表示 ---
             document.getElementById("rank4").innerText = data[3] ? `${getActualRank(3, data)}位: ${data[3].name}` : "4位: ---";
             document.getElementById("rank5").innerText = data[4] ? `${getActualRank(4, data)}位: ${data[4].name}` : "5位: ---";
 
-            // --- 2. 全順位リスト（同点対応の正しい順位で表示） ---
+            // --- 3. 全順位リスト表示 ---
             const listContainer = document.getElementById("allRankList");
             listContainer.innerHTML = "";
 
@@ -821,7 +826,6 @@
             ol.style.margin = "0";
 
             data.forEach((item, index) => {
-                // 正確な順位を計算（自分よりスコアが高い、あるいは同点のグループの先頭位置）
                 const actualRank = getActualRank(index, data);
 
                 const li = document.createElement("li");
@@ -837,7 +841,7 @@
             // 初期状態はTOP5を表示
             toggleRankView('top5');
         }
-
+        
         // 順位（タイ対応）を計算するヘルパー関数
         function getActualRank(index, data) {
             if (!data[index]) return index + 1;
