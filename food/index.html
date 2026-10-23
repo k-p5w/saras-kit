@@ -329,14 +329,50 @@
             margin: 5px 0;
             font-weight: bold;
         }
+
+        /* プログレスバーのコンテナ */
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            height: 12px;
+            margin: 8px 0 15px 0;
+            overflow: hidden;
+        }
+
+        /* 実際に伸びるバー */
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff9800, #d32f2f);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 
 <body>
 
-    <h1>🏆 ごはんグランプリ 🏆</h1>
+    <h1>🏆 Food-1グランプリ 〜ごはん決定戦〜 🏆</h1>
 
     <div id="setupScreen" class="card screen active-screen">
+
+        <!-- 💡 使い方（Tips）セクションを追加 -->
+        <details
+            style="background: #f1f3f5; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; text-align: left; font-size: 0.85rem; color: #555;">
+            <summary style="font-weight: bold; cursor: pointer; color: #333; font-size: 0.9rem;">
+                🔰 あそびかた（タップで開閉）
+            </summary>
+            <ol style="margin: 8px 0 0 0; padding-left: 20px; line-height: 1.6;">
+                <li><strong>ごはんを選択:</strong> 好きなジャンルや手入力でメニューを登録！</li>
+                <li><strong>組み合わせ決定:</strong> 「グループ組み合わせ決定」を押してエントリー完了！</li>
+                <li><strong>グランプリ開幕:</strong> 自動で分けられた予選グループを確認してスタート！</li>
+                <li><strong>ひたすら対決:</strong> 表示される2つのごはんから「好きな方」を選んでタップ！</li>
+                <li><strong>殿堂入り決定:</strong> 予選〜決勝を勝ち抜いた栄光の「No.1」が決まります！🎉</li>
+            </ol>
+        </details>
+
+
         <h2>1. 出場ごはんのエントリー (現在: <span id="entryCount">0</span>品)</h2>
 
         <!-- プリセット選択 UI -->
@@ -354,7 +390,7 @@
             <button class="btn-add" onclick="addFood()">追加</button>
         </div>
 
-        <button class="btn-action" onclick="generateGroups()">グループ組み合わせ決定（エントリー完了！）</button>
+        <button class="btn-action" onclick="generateGroups()">グループ組み合わせ決定（準備完了！）</button>
         <div class="food-tags" id="foodTags"></div>
     </div>
 
@@ -374,7 +410,14 @@
 
     <div id="gameScreen" class="screen">
         <div class="stage-title" id="stageTitle">予選</div>
-        <div class="progress" id="progressText">第 1 / 15 戦</div>
+
+        <!-- ここから書き換え -->
+        <div class="progress" id="progressText">進捗 0%</div>
+        <div class="progress-bar-container">
+            <div id="progressBarFill" class="progress-bar-fill"></div>
+        </div>
+        <!-- ここまで -->
+
 
         <div class="vs-container">
             <button id="btnA" class="btn-food" onclick="vote(1)"></button>
@@ -395,7 +438,7 @@
             <button id="btnViewTop5" class="btn-sub" style="padding: 8px 16px; font-weight: bold;"
                 onclick="toggleRankView('top5')">🏆 TOP5 表示</button>
             <button id="btnViewAll" class="btn-sub" style="padding: 8px 16px; font-weight: bold; background: #bbb;"
-                onclick="toggleRankView('all')">📊 全ランキング表示</button>
+                onclick="toggleRankView('all')">📊 決勝全順位表示</button>
         </div>
 
         <!-- TOP5カード表示 -->
@@ -412,7 +455,7 @@
 
         <!-- 全順位リスト表示（初期状態は非表示） -->
         <div id="allRankView" class="result-card" style="display: none; text-align: left;">
-            <h2 class="ranking-title" style="text-align: center;">📊 最終全順位リスト 📊</h2>
+            <h2 class="ranking-title" style="text-align: center;">📊 決勝進出者 最終順位 📊</h2>
             <div id="allRankList" style="max-height: 300px; overflow-y: auto;"></div>
         </div>
 
@@ -594,12 +637,16 @@
             let foodNames = [];
 
             if (index < groupsData.length) {
-                groupName = groupsData[index].name;
+                // 全グループ数を表示に追加（例：予選グループ A (1 / 4)）
+                const totalGroups = groupsData.length;
+                groupName = `${groupsData[index].name} (${index + 1} / ${totalGroups})`;
                 foodNames = groupsData[index].foods;
             } else {
                 groupName = "👑 決勝グランプリ 👑";
                 foodNames = finalists;
             }
+
+            document.getElementById("stageTitle").innerText = groupName;
 
             document.getElementById("stageTitle").innerText = groupName;
             currentGroupFoods = foodNames.map(name => ({
@@ -841,7 +888,7 @@
             // 初期状態はTOP5を表示
             toggleRankView('top5');
         }
-        
+
         // 順位（タイ対応）を計算するヘルパー関数
         function getActualRank(index, data) {
             if (!data[index]) return index + 1;
@@ -851,6 +898,33 @@
                 item.losses === data[index].losses
             );
             return firstIndex + 1;
+        }
+
+
+        function showMatch() {
+            if (currentMatchIndex >= currentMatches.length) {
+                finishGroup();
+                return;
+            }
+
+            const match = currentMatches[currentMatchIndex];
+
+            if (isSkipMode && (match[0].finished || match[1].finished)) {
+                currentMatchIndex++;
+                showMatch();
+                return;
+            }
+
+            document.getElementById("btnA").innerText = match[0].name;
+            document.getElementById("btnB").innerText = match[1].name;
+
+            // --- 進捗計算とゲージ更新 ---
+            const total = currentMatches.length;
+            // 1試合目スタート時は 0% に近くなり、最終試合に向かって100%に近づく計算
+            const percent = Math.min(100, Math.round((currentMatchIndex / total) * 100));
+
+            document.getElementById("progressText").innerText = `進捗 ${percent}%`;
+            document.getElementById("progressBarFill").style.width = `${percent}%`;
         }
 
         // 初期化実行
