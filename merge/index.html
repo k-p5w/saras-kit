@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>マージ×サバクラ：冒険イベント拡張版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>マージ×サバクラ：完全版モック</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -12,41 +13,68 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            padding: 10px;
-            gap: 10px;
+            padding: 8px;
+            gap: 8px;
+            overflow: hidden;
+            touch-action: none; /* スワイプ時の画面スクロール防止 */
         }
 
         /* --- 上部：ステータスバー --- */
         .status-bar {
             display: flex;
-            gap: 8px 20px;
+            gap: 6px 12px;
             flex-wrap: wrap;
             align-items: center;
             background: #2d2d2d;
-            padding: 8px 16px;
+            padding: 6px 12px;
             border-radius: 8px;
             border: 1px solid #444;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
         .status-item span { font-weight: bold; color: #4CAF50; }
         .gold-item span { color: #ffd700; }
-        .era-badge { background: #4a3b69; padding: 2px 8px; border-radius: 4px; border: 1px solid #7c5ac2; font-weight: bold; }
+        .era-badge { background: #4a3b69; padding: 2px 6px; border-radius: 4px; border: 1px solid #7c5ac2; font-weight: bold; }
 
         .reset-btn {
             background: #e53935; color: white; border: none;
-            padding: 4px 10px; border-radius: 4px; cursor: pointer;
-            font-weight: bold; font-size: 0.8rem; margin-left: auto;
+            padding: 4px 8px; border-radius: 4px; cursor: pointer;
+            font-weight: bold; font-size: 0.75rem; margin-left: auto;
         }
-        .reset-btn:hover { background: #c62828; }
+
+        /* --- モバイル用タブ切替ヘッダー --- */
+        .mobile-tabs {
+            display: none;
+            gap: 4px;
+            background: #252525;
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid #333;
+        }
+        .tab-btn {
+            flex: 1;
+            background: #333;
+            color: #aaa;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: #4CAF50;
+            color: #fff;
+        }
 
         /* --- メインコンテナ --- */
         .main-layout {
             display: flex;
-            flex: 7;
-            gap: 10px;
+            flex: 1;
+            gap: 8px;
             min-height: 0;
         }
 
+        /* パズル盤面エリア */
         .puzzle-section {
             flex: 7;
             display: flex;
@@ -54,77 +82,76 @@
             align-items: center;
             justify-content: center;
             background: #252525;
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
             border: 1px solid #333;
-            position: relative;
         }
 
         .board-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
         .guide-row {
             display: flex;
             justify-content: space-between;
             width: 100%;
-            padding: 0 10px;
-            font-size: 0.8rem;
+            padding: 0 8px;
+            font-size: 0.75rem;
             color: #aaa;
             font-weight: bold;
         }
         .board-middle {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
         }
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(5, 75px);
-            grid-template-rows: repeat(5, 75px);
-            gap: 6px;
+            grid-template-columns: repeat(5, min(14vw, 70px));
+            grid-template-rows: repeat(5, min(14vw, 70px));
+            gap: 5px;
             background: #111;
-            padding: 8px;
-            border-radius: 10px;
+            padding: 6px;
+            border-radius: 8px;
             border: 2px solid #444;
         }
         .cell {
-            width: 75px; height: 75px; background: #2a2a2a; border-radius: 6px;
+            width: 100%; height: 100%; background: #2a2a2a; border-radius: 6px;
             display: flex; align-items: center; justify-content: center;
             font-weight: bold; user-select: none; cursor: default;
         }
 
-        .tile-card { background: var(--card-bg); color: #fff; border: 2px dashed var(--card-bd); font-size: 1.4rem; }
+        .tile-card { background: var(--card-bg); color: #fff; border: 2px dashed var(--card-bd); font-size: 1.3rem; }
         .tile-mat {
             background: var(--mat-bg); color: var(--mat-fg); border: 2px solid var(--mat-bd);
-            font-size: 1.6rem; box-shadow: inset 0 0 8px var(--mat-glow); cursor: pointer;
+            font-size: 1.5rem; box-shadow: inset 0 0 8px var(--mat-glow); cursor: pointer;
         }
-        .tile-mat:hover { transform: scale(1.05); }
 
+        /* サイドメニュー（ショップ等） */
         .side-section {
             flex: 3;
             background: #252525;
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
             border: 1px solid #333;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             overflow-y: auto;
         }
-        .shop-title { font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px; margin-top: 4px; }
+        .shop-title { font-size: 0.85rem; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 2px; margin-top: 4px; }
         
         .shop-item {
             background: #333;
-            padding: 6px 10px;
+            padding: 6px 8px;
             border-radius: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
         }
         .shop-item.era-item { background: #3c2a4d; border: 1px solid #7c5ac2; }
         .shop-item button {
@@ -132,29 +159,41 @@
             padding: 4px 8px; border-radius: 4px; cursor: pointer;
             font-weight: bold; font-size: 0.75rem;
         }
-        .shop-item.era-item button { background: #7c5ac2; }
 
+        /* 下部冒険ログ */
         .log-section {
-            flex: 3;
+            height: 110px;
             background: #111;
-            padding: 8px;
+            padding: 6px;
             border-radius: 8px;
             border: 1px solid #333;
             overflow-y: auto;
             font-family: monospace;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             display: flex;
             flex-direction: column-reverse;
         }
-        .log-entry { margin-bottom: 3px; color: #ccc; }
+        .log-entry { margin-bottom: 2px; color: #ccc; }
         .log-entry.event { color: #ffd700; }
         .log-entry.reward { color: #4dd0e1; }
+        .log-entry.goddess { color: #e1bee7; font-weight: bold; }
         .log-entry.danger { color: #ff8a80; }
         .log-entry.gameover { color: #ff6b6b; font-weight: bold; }
+
+        /* スマホ用レスポンシブ（768px以下はタブ段階表示） */
+        @media (max-width: 768px) {
+            .mobile-tabs { display: flex; }
+            .main-layout { flex-direction: column; }
+            .side-section { display: none; } /* デフォルトで非表示 */
+            .side-section.active { display: flex; flex: 1; }
+            .puzzle-section { flex: 1; display: flex; }
+            .puzzle-section.hidden { display: none; }
+        }
     </style>
 </head>
 <body>
 
+    <!-- 上部ステータスバー -->
     <div class="status-bar">
         <div class="status-item">時代: <span id="era-name" class="era-badge">原初の時代</span></div>
         <span id="inv-bar" style="display: contents;"></span>
@@ -163,16 +202,24 @@
         <button class="reset-btn" onclick="resetGame()">リセット</button>
     </div>
 
+    <!-- スマホ専用段階表示（タブボタン） -->
+    <div class="mobile-tabs">
+        <button class="tab-btn active" onclick="switchTab('puzzle')">🎮 パズル盤面</button>
+        <button class="tab-btn" onclick="switchTab('shop')">🛒 拠点・ショップ</button>
+    </div>
+
+    <!-- メインエリア -->
     <div class="main-layout">
-        <div class="puzzle-section">
+        <!-- パズルエリア -->
+        <div class="puzzle-section" id="puzzle-section">
             <div class="board-wrapper">
                 <div class="guide-row">
                     <span>⬆️ 上スワイプ: <strong id="guide-up">-</strong></span>
                 </div>
                 <div class="board-middle">
-                    <span id="guide-left" style="writing-mode: vertical-rl; font-size: 0.8rem; color: #aaa; font-weight: bold;">⬅️ 左: -</span>
+                    <span id="guide-left" style="writing-mode: vertical-rl; font-size: 0.75rem; color: #aaa; font-weight: bold;">⬅️ 左: -</span>
                     <div class="grid" id="grid"></div>
-                    <span id="guide-right" style="writing-mode: vertical-rl; font-size: 0.8rem; color: #aaa; font-weight: bold;">➡️ 右: -</span>
+                    <span id="guide-right" style="writing-mode: vertical-rl; font-size: 0.75rem; color: #aaa; font-weight: bold;">➡️ 右: -</span>
                 </div>
                 <div class="guide-row">
                     <span>⬇️ 下スワイプ: <strong id="guide-down">-</strong></span>
@@ -180,7 +227,8 @@
             </div>
         </div>
 
-        <div class="side-section">
+        <!-- ショップエリア -->
+        <div class="side-section" id="side-section">
             <div class="shop-title">時代の進行・進化</div>
             <div id="era-shop-list"></div>
 
@@ -205,6 +253,7 @@
         </div>
     </div>
 
+    <!-- 冒険ログ -->
     <div class="log-section" id="log-section">
         <div class="log-entry">冒険の準備が整いました。</div>
     </div>
@@ -230,52 +279,13 @@
     };
     let currentEra = 'primal';
 
-    /* ==========================================
-     * 冒険イベントリスト（データ定義化）
-     * ========================================== */
     const ADVENTURE_EVENTS = [
-        {
-            weight: 30,
-            text: h => `⚔️ ${h.name}が魔物を撃破しました！ (+5G)`,
-            effect: () => { gold += 5; },
-            type: 'event'
-        },
-        {
-            weight: 25,
-            text: h => `🌲 ${h.name}が森林で木材を調達しました！ (+2木材)`,
-            effect: () => { inventory.wood = (inventory.wood || 0) + 2; },
-            type: 'reward'
-        },
-        {
-            weight: 20,
-            text: h => `⛏️ ${h.name}が岩山から石材を削り出しました！ (+2石材)`,
-            effect: () => { inventory.stone = (inventory.stone || 0) + 2; },
-            type: 'reward'
-        },
-        {
-            weight: 10,
-            text: h => `💎 ${h.name}が隠された宝箱を発見しました！ (+15G)`,
-            effect: () => { gold += 15; },
-            type: 'reward'
-        },
-        {
-            weight: 10,
-            text: h => `💀 ${h.name}が毒キノコを誤飲して治療費を払いました... (-3G)`,
-            effect: () => { gold = Math.max(0, gold - 3); },
-            type: 'danger'
-        },
-        {
-            weight: 15,
-            text: h => `⛰️ ${h.name}は静かに未開の地を探索中...`,
-            effect: () => {},
-            type: ''
-        },
-        {
-            weight: 10,
-            text: h => `🍺 ${h.name}は酒場で英気を養っています。`,
-            effect: () => {},
-            type: ''
-        }
+        { weight: 30, text: h => `⚔️ ${h.name}が魔物を撃破しました！ (+5G)`, effect: () => { gold += 5; }, type: 'event' },
+        { weight: 25, text: h => `🌲 ${h.name}が森林で木材を採集しました！ (+2木材)`, effect: () => { inventory.wood = (inventory.wood || 0) + 2; }, type: 'reward' },
+        { weight: 20, text: h => `⛏️ ${h.name}が岩山で石材を掘り出しました！ (+2石材)`, effect: () => { inventory.stone = (inventory.stone || 0) + 2; }, type: 'reward' },
+        { weight: 10, text: h => `💎 ${h.name}が隠された宝箱を発見しました！ (+15G)`, effect: () => { gold += 15; }, type: 'reward' },
+        { weight: 10, text: h => `💀 ${h.name}がトラップにかかり応急手当を行いました... (-3G)`, effect: () => { gold = Math.max(0, gold - 3); }, type: 'danger' },
+        { weight: 15, text: h => `⛰️ ${h.name}は静かに未開の地を探索中...`, effect: () => {}, type: '' }
     ];
 
     const SIZE = 5;
@@ -288,9 +298,7 @@
     let isGameOver = false;
     let adventureTimer = null;
 
-    function activeMaterials() { 
-        return [...new Set(Object.values(ERAS[currentEra].sides))]; 
-    }
+    function activeMaterials() { return [...new Set(Object.values(ERAS[currentEra].sides))]; }
 
     function setTileVars(cell, type) {
         const m = MATERIALS[type];
@@ -300,6 +308,25 @@
         cell.style.setProperty('--mat-fg', m.matFg);
         cell.style.setProperty('--mat-bd', m.matBd);
         cell.style.setProperty('--mat-glow', m.matBd + '4d');
+    }
+
+    /* --- タブ切替機能（スマホ用段階表示） --- */
+    function switchTab(tab) {
+        const puzzleSec = document.getElementById('puzzle-section');
+        const sideSec = document.getElementById('side-section');
+        const btns = document.querySelectorAll('.tab-btn');
+
+        if (tab === 'puzzle') {
+            puzzleSec.classList.remove('hidden');
+            sideSec.classList.remove('active');
+            btns[0].classList.add('active');
+            btns[1].classList.remove('active');
+        } else {
+            puzzleSec.classList.add('hidden');
+            sideSec.classList.add('active');
+            btns[0].classList.remove('active');
+            btns[1].classList.add('active');
+        }
     }
 
     function initGame() {
@@ -345,12 +372,12 @@
             eraDef.unlocked = true;
             currentEra = nextEraId;
             
-            addLog(`🎉 【時代の解放】${eraDef.name} に進化しました！新たな素材が出現します。`, 'event');
+            addLog(`🎉 【時代の解放】${eraDef.name} に進化しました！`, 'event');
             renderShop();
             updateDirectionGuides();
             updateView();
         } else {
-            addLog(`ゴールドが足りません！（必要: ${eraDef.cost}G）`);
+            addLog(`ゴールドが足りません！`);
         }
     }
 
@@ -368,7 +395,7 @@
                 </div>
             `;
         } else {
-            eraContainer.innerHTML = `<div style="font-size:0.8rem; color:#aaa; padding:4px;">最高レベルの時代に達しています。</div>`;
+            eraContainer.innerHTML = `<div style="font-size:0.75rem; color:#aaa; padding:4px;">最高レベルの時代に達しています。</div>`;
         }
 
         document.getElementById('sell-list').innerHTML = activeMaterials().map(k => {
@@ -433,10 +460,12 @@
         }
     }
 
+    /* --- 完全詰み判定＆「女神の慈悲」システム --- */
     function checkGameOver() {
         let hasEmpty = board.some(v => v === null);
         if (hasEmpty) return;
 
+        // 隣接ペアの合体可能性チェック
         for (let r = 0; r < SIZE; r++) {
             for (let c = 0; c < SIZE; c++) {
                 let current = board[r * SIZE + c];
@@ -451,28 +480,85 @@
                 }
             }
         }
-        isGameOver = true;
-        addLog(`⚠️ 【詰み】盤面が埋まりました！漢数字タイルをクリックして回収するか、「リセット」してください。`, 'gameover');
-    }
 
-    document.addEventListener('keydown', e => {
-        if (isGameOver) return;
-        let moved = false;
-        let supplyType = null;
+        // 完全詰みの場合：一定確率で「女神の慈悲」発動！
+        if (Math.random() < 0.8) { // 80%の確率で救済
+            let maxVal = -1;
+            let maxIdx = -1;
 
-        const dirs = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-        const dir = dirs[e.key];
-        if (dir) { 
-            moved = slide(dir); 
-            supplyType = ERAS[currentEra].sides[dir]; 
+            // 盤面で最も価値の高いタイル（計算用スコア: tier * 100 + val）を探す
+            board.forEach((t, i) => {
+                if (t) {
+                    let score = t.tier * 100 + t.val;
+                    if (score > maxVal) {
+                        maxVal = score;
+                        maxIdx = i;
+                    }
+                }
+            });
+
+            if (maxIdx !== -1) {
+                let removedTile = board[maxIdx];
+                board[maxIdx] = null; // 最大マスを除去してスペース確保
+                gold += 20; // 恵みのゴールド
+                
+                let matName = MATERIALS[removedTile.type].name;
+                addLog(`✨ 【女神の慈悲発動！】最大のマス（${matName}）が消滅し、20Gの恵みを授かりました！`, 'goddess');
+                updateView();
+                return;
+            }
         }
 
-        if (moved) {
+        isGameOver = true;
+        addLog(`⚠️ 【詰み】盤面が埋まりました！漢数字タイルを回収するかリセットしてください。`, 'gameover');
+    }
+
+    /* --- スワイプ／キーボード入力処理 --- */
+    let touchStartX = 0, touchStartY = 0;
+
+    // タッチ開始（スマホ）
+    document.addEventListener('touchstart', e => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    // タッチ終了（スワイプ判定）
+    document.addEventListener('touchend', e => {
+        if (isGameOver) return;
+        let touchEndX = e.changedTouches[0].clientX;
+        let touchEndY = e.changedTouches[0].clientY;
+
+        let dx = touchEndX - touchStartX;
+        let dy = touchEndY - touchStartY;
+
+        // スワイプ移動距離が小さすぎる場合は無視（タップ動作と区別）
+        if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return;
+
+        let dir = null;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            dir = dx > 0 ? 'right' : 'left';
+        } else {
+            dir = dy > 0 ? 'down' : 'up';
+        }
+
+        handleMove(dir);
+    }, { passive: true });
+
+    // キーボード入力（PC）
+    document.addEventListener('keydown', e => {
+        if (isGameOver) return;
+        const dirs = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+        if (dirs[e.key]) handleMove(dirs[e.key]);
+    });
+
+    function handleMove(dir) {
+        if (slide(dir)) {
+            let supplyType = ERAS[currentEra].sides[dir];
             spawnTile(supplyType);
             updateView();
             checkGameOver();
         }
-    });
+    }
 
     function slide(direction) {
         let rotCount = 0;
@@ -587,16 +673,10 @@
         }
     }
 
-    /* ==========================================
-     * 拡張された冒険ループ関数
-     * ========================================== */
     function adventureLoop() {
         if (heroes.length === 0) return;
-        
-        // ランダムに勇者を1名抽出
         let h = heroes[Math.floor(Math.random() * heroes.length)];
 
-        // 重みに応じたランダム抽選処理
         let totalWeight = ADVENTURE_EVENTS.reduce((sum, e) => sum + e.weight, 0);
         let rand = Math.floor(Math.random() * totalWeight);
         
@@ -609,7 +689,6 @@
             rand -= evt.weight;
         }
 
-        // イベント効果の適用とログ出力
         selectedEvent.effect();
         addLog(selectedEvent.text(h), selectedEvent.type);
         updateView();
