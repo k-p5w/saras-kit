@@ -219,6 +219,21 @@
             cursor: pointer;
         }
 
+        /* 予選の分け方（リーグ方式）選択 */
+        .mode-area {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f1f3f5;
+            border-radius: 6px;
+        }
+
+        .mode-area label {
+            display: block;
+            font-size: 0.85rem;
+            padding: 3px 0;
+            cursor: pointer;
+        }
+
         /* グループ抽選結果画面 */
         .groups-grid {
             display: grid;
@@ -404,19 +419,25 @@
             <button class="btn-add" id="btnAdd">追加</button>
         </div>
 
+        <div class="mode-area">
+            <div class="preset-title">🎲 予選の分け方</div>
+            <label><input type="radio" name="groupMode" value="random"> ランダムリーグ（全部まぜて抽選・各グループ上位が決勝へ）</label>
+            <label><input type="radio" name="groupMode" value="category"> カテゴリリーグ（カテゴリごとにNo.1を決めて決勝へ）</label>
+        </div>
+
         <button class="btn-action" id="btnGenerateGroups">グループ組み合わせ決定（エントリー完了！）</button>
         <div class="food-tags" id="foodTags"></div>
     </div>
 
     <div id="groupViewScreen" class="card screen">
-        <h2>🎲 予選グループ決定！ 🎲</h2>
+        <h2 id="groupViewTitle">🎲 予選グループ決定！ 🎲</h2>
         <div id="groupsGrid" class="groups-grid"></div>
         <p id="finalEstimate" class="final-estimate"></p>
 
         <div class="settings-area">
             <label>
-                <input type="checkbox" id="skipMatchesCheck" checked>
-                消化試合を自動で短縮する（推奨）
+                <input type="checkbox" id="skipMatchesCheck">
+                消化試合を自動で短縮する（2勝か2敗で打ち切り・精度は少し下がります）
             </label>
         </div>
 
@@ -494,9 +515,11 @@
         let cfg = null;      // 現在のテーマ設定
         let presets = {};    // { カテゴリ名: [名前, ...] }
         const GROUP_SIZE_DEFAULT = 6;
-        const ADVANCE_DEFAULT = 2;
+        const ADVANCE_RANDOM_DEFAULT = 2;    // ランダムリーグ: 各グループ上位2が決勝へ
+        const ADVANCE_CATEGORY_DEFAULT = 1;  // カテゴリリーグ: 各カテゴリのNo.1が決勝へ
         const MIN_ENTRIES_DEFAULT = 4;
         const FINAL_WARN_MATCHES = 100;
+        const TOTAL_WARN_MATCHES = 300;
 
         // ---------- エントリー状態 ----------
         let activeCategories = new Set();
@@ -505,6 +528,9 @@
 
         // ---------- 大会進行状態 ----------
         let groupsData = [];
+        let isCategoryMode = false;  // 予選をカテゴリ別にしているか
+        let advanceCount = ADVANCE_RANDOM_DEFAULT; // 各グループから決勝に進む数（開始時に確定）
+        let finalistOrigin = {};     // 決勝進出者 → 勝ち上がった予選（カテゴリ）名
         let currentGroupIndex = 0;
         let currentGroupFoods = [];
         let currentMatches = [];
@@ -560,6 +586,10 @@
             $("entryUnit").textContent = cfg.unit || "件";
             $("newFoodInput").placeholder = `新しい${cfg.itemLabel}を入力`;
             $("hallOfFameText").textContent = `栄えある「${cfg.hallOfFame}」が決定しました。`;
+
+            // 予選の分け方の初期値（テーマ設定の groupMode。省略時はランダムリーグ）
+            const initialMode = cfg.groupMode === "category" ? "category" : "random";
+            document.querySelector(`input[name="groupMode"][value="${initialMode}"]`).checked = true;
 
             // デフォルトで選択状態にするカテゴリ（存在するものだけ）
             activeCategories = new Set((cfg.defaultCategories || []).filter(c => presets[c]));
@@ -726,6 +756,33 @@
         }
 
         // ---------- グループ分け ----------
+        // カテゴリ別の予選グループを作る（プリセットの定義順）。
+        // 複数カテゴリに載っている作品は最初のカテゴリだけに入れる。
+        // どのカテゴリにも属さない手動追加分は「追加エントリー」グループにまとめる。
+        function buildCategoryGroups(list) {
+            const inList = new Set(list);
+            const used = new Set();
+            const groups = [];
+
+            Object.keys(presets).forEach(cat => {
+                if (!activeCategories.has(cat)) return;
+                const foods = (presets[cat] || []).filter(f => inList.has(f) && !used.has(f));
+                foods.forEach(f => used.add(f));
+                if (foods.length > 0) groups.push({ name: cat, foods: foods });
+            });
+
+            const rest = list.filter(f => !used.has(f));
+            if (rest.length > 0) groups.push({ name: "✏️ 追加エントリー", foods: rest });
+
+            return groups;
+        }
+
+        // 画面で選ばれている予選の分け方（"random" か "category"）
+        function getSelectedMode() {
+            const checked = document.querySelector('input[name="groupMode"]:checked');
+            return checked ? checked.value : "random";
+        }
+
         function generateGroups() {
             const list = currentList();
             const minEntries = cfg.minEntries || MIN_ENTRIES_DEFAULT;
@@ -735,17 +792,35 @@
             }
 
             const groupSize = cfg.groupSize || GROUP_SIZE_DEFAULT;
-            const advance = cfg.advancePerGroup || ADVANCE_DEFAULT;
-            const shuffled = shuffle(list);
-            const groupCount = Math.max(2, Math.ceil(shuffled.length / groupSize));
+            const wantCategory = getSelectedMode() === "category";
 
-            groupsData = [];
-            for (let i = 0; i < groupCount; i++) {
-                groupsData.push({ name: `予選グループ ${groupLabel(i)}`, foods: [] });
+            // カテゴリリーグ（2グループ以上できないときは、ランダムリーグに切り替え）
+            groupsData = wantCategory ? buildCategoryGroups(list) : [];
+            isCategoryMode = groupsData.length >= 2;
+            const fellBack = wantCategory && !isCategoryMode;
+
+            // 決勝に進む数: カテゴリリーグは既定1(No.1のみ)、ランダムリーグは既定2
+            const advance = isCategoryMode
+                ? (cfg.advancePerCategory || ADVANCE_CATEGORY_DEFAULT)
+                : (cfg.advancePerGroup || ADVANCE_RANDOM_DEFAULT);
+            advanceCount = advance;
+
+            if (!isCategoryMode) {
+                const shuffled = shuffle(list);
+                const groupCount = Math.max(2, Math.ceil(shuffled.length / groupSize));
+
+                groupsData = [];
+                for (let i = 0; i < groupCount; i++) {
+                    groupsData.push({ name: `予選グループ ${groupLabel(i)}`, foods: [] });
+                }
+                shuffled.forEach((food, idx) => {
+                    groupsData[idx % groupCount].foods.push(food);
+                });
             }
-            shuffled.forEach((food, idx) => {
-                groupsData[idx % groupCount].foods.push(food);
-            });
+
+            $("groupViewTitle").textContent = isCategoryMode
+                ? "🎲 予選はカテゴリ別！ 🎲"
+                : "🎲 予選グループ決定！ 🎲";
 
             const grid = $("groupsGrid");
             grid.innerHTML = "";
@@ -769,9 +844,14 @@
             const finalCount = groupsData.reduce((sum, g) => sum + Math.min(advance, g.foods.length), 0);
             const finalMatches = finalCount * (finalCount - 1) / 2;
             const est = $("finalEstimate");
-            est.textContent = `決勝は ${finalCount}${cfg.unit || "件"}・総当たりで最大 ${finalMatches} 戦になります。`;
-            if (finalMatches > FINAL_WARN_MATCHES) {
-                est.textContent += `長くなりそうなので、エントリーを絞るのがおすすめです。`;
+            const unitName = isCategoryMode ? "カテゴリ" : "グループ";
+            const qualMatches = groupsData.reduce((sum, g) => sum + g.foods.length * (g.foods.length - 1) / 2, 0);
+            est.textContent = `予選は最大 ${qualMatches} 戦。各${unitName}の上位${advance}が決勝へ進み、決勝は ${finalCount}${cfg.unit || "件"}・最大 ${finalMatches} 戦です。`;
+            if (fellBack) {
+                est.textContent = "カテゴリが1つしかないので、ランダムリーグにしました。" + est.textContent;
+            }
+            if (finalMatches > FINAL_WARN_MATCHES || qualMatches + finalMatches > TOTAL_WARN_MATCHES) {
+                est.textContent += `かなり長くなりそうなので、エントリーを絞るか、下の「短縮」をONにするのがおすすめです。`;
                 est.className = "final-estimate warn";
             } else {
                 est.className = "final-estimate";
@@ -785,6 +865,7 @@
             isSkipMode = $("skipMatchesCheck").checked;
             currentGroupIndex = 0;
             finalists = [];
+            finalistOrigin = {};
             showScreen("gameScreen");
             startGroup(currentGroupIndex);
         }
@@ -797,7 +878,7 @@
                 groupName = groupsData[index].name;
                 foodNames = groupsData[index].foods;
             } else {
-                groupName = "👑 決勝グランプリ 👑";
+                groupName = isCategoryMode ? "👑 決勝（各カテゴリの代表） 👑" : "👑 決勝グランプリ 👑";
                 foodNames = finalists;
             }
 
@@ -873,8 +954,11 @@
             const sorted = sortByScore(currentGroupFoods);
 
             if (currentGroupIndex < groupsData.length) {
-                const advance = cfg.advancePerGroup || ADVANCE_DEFAULT;
-                finalists.push(...sorted.slice(0, advance).map(f => f.name));
+                const originName = groupsData[currentGroupIndex].name;
+                sorted.slice(0, advanceCount).forEach(f => {
+                    finalists.push(f.name);
+                    finalistOrigin[f.name] = originName;
+                });
                 currentGroupIndex++;
                 startGroup(currentGroupIndex);
                 return;
@@ -1000,6 +1084,15 @@
                 li.appendChild(strong);
                 li.appendChild(pt);
                 li.appendChild(record);
+
+                // カテゴリ別予選のときは、どのカテゴリの代表かも表示
+                if (isCategoryMode && finalistOrigin[item.name]) {
+                    const origin = document.createElement("div");
+                    origin.style.cssText = "font-size:0.8rem; color:#888;";
+                    origin.textContent = finalistOrigin[item.name];
+                    li.appendChild(origin);
+                }
+
                 ol.appendChild(li);
             });
             listContainer.appendChild(ol);

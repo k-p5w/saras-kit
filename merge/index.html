@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>マージ×サバクラ</title>
+    <title>マージ×サバクラ：冒険イベント拡張版</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -19,7 +19,9 @@
         /* --- 上部：ステータスバー --- */
         .status-bar {
             display: flex;
-            gap: 20px;
+            gap: 8px 20px;
+            flex-wrap: wrap;
+            align-items: center;
             background: #2d2d2d;
             padding: 8px 16px;
             border-radius: 8px;
@@ -28,8 +30,16 @@
         }
         .status-item span { font-weight: bold; color: #4CAF50; }
         .gold-item span { color: #ffd700; }
+        .era-badge { background: #4a3b69; padding: 2px 8px; border-radius: 4px; border: 1px solid #7c5ac2; font-weight: bold; }
 
-        /* --- メインコンテナ（左右分割：パズル 7 ： ショップ 3） --- */
+        .reset-btn {
+            background: #e53935; color: white; border: none;
+            padding: 4px 10px; border-radius: 4px; cursor: pointer;
+            font-weight: bold; font-size: 0.8rem; margin-left: auto;
+        }
+        .reset-btn:hover { background: #c62828; }
+
+        /* --- メインコンテナ --- */
         .main-layout {
             display: flex;
             flex: 7;
@@ -37,7 +47,6 @@
             min-height: 0;
         }
 
-        /* パズル盤面エリア */
         .puzzle-section {
             flex: 7;
             display: flex;
@@ -51,6 +60,27 @@
             position: relative;
         }
 
+        .board-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .guide-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 10px;
+            font-size: 0.8rem;
+            color: #aaa;
+            font-weight: bold;
+        }
+        .board-middle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(5, 75px);
@@ -62,33 +92,18 @@
             border: 2px solid #444;
         }
         .cell {
-            width: 75px;
-            height: 75px;
-            background: #2a2a2a;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            user-select: none;
-            cursor: default;
+            width: 75px; height: 75px; background: #2a2a2a; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; user-select: none; cursor: default;
         }
 
-        /* 階層①（札：アラビア数字）のデザイン */
-        .tile-card-wood { background: #8d5524; color: #fff; border: 2px dashed #ffcc99; font-size: 1.4rem; }
-        .tile-card-stone { background: #708090; color: #fff; border: 2px dashed #dcdcdc; font-size: 1.4rem; }
-
-        /* 階層②（資材：漢数字）のデザイン ※クリックで手動回収可能 */
-        .tile-mat-wood { 
-            background: #5c3a21; color: #ffe0b2; border: 2px solid #ffb74d; 
-            font-size: 1.6rem; box-shadow: inset 0 0 8px rgba(255,183,77,0.3); cursor: pointer; 
+        .tile-card { background: var(--card-bg); color: #fff; border: 2px dashed var(--card-bd); font-size: 1.4rem; }
+        .tile-mat {
+            background: var(--mat-bg); color: var(--mat-fg); border: 2px solid var(--mat-bd);
+            font-size: 1.6rem; box-shadow: inset 0 0 8px var(--mat-glow); cursor: pointer;
         }
-        .tile-mat-stone { 
-            background: #3b4c5c; color: #e0f7fa; border: 2px solid #4dd0e1; 
-            font-size: 1.6rem; box-shadow: inset 0 0 8px rgba(77,208,225,0.3); cursor: pointer; 
-        }
+        .tile-mat:hover { transform: scale(1.05); }
 
-        /* --- 右側：ショップ・拠点メニュー --- */
         .side-section {
             flex: 3;
             background: #252525;
@@ -100,7 +115,7 @@
             gap: 8px;
             overflow-y: auto;
         }
-        .shop-title { font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px; }
+        .shop-title { font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 4px; margin-top: 4px; }
         
         .shop-item {
             background: #333;
@@ -111,18 +126,14 @@
             align-items: center;
             font-size: 0.8rem;
         }
+        .shop-item.era-item { background: #3c2a4d; border: 1px solid #7c5ac2; }
         .shop-item button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 0.75rem;
+            background: #4CAF50; color: white; border: none;
+            padding: 4px 8px; border-radius: 4px; cursor: pointer;
+            font-weight: bold; font-size: 0.75rem;
         }
+        .shop-item.era-item button { background: #7c5ac2; }
 
-        /* --- 下部：冒険ログエリア --- */
         .log-section {
             flex: 3;
             background: #111;
@@ -138,48 +149,53 @@
         .log-entry { margin-bottom: 3px; color: #ccc; }
         .log-entry.event { color: #ffd700; }
         .log-entry.reward { color: #4dd0e1; }
+        .log-entry.danger { color: #ff8a80; }
         .log-entry.gameover { color: #ff6b6b; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- ステータス表示 -->
     <div class="status-bar">
-        <div class="status-item">木材: <span id="inv-wood">0</span></div>
-        <div class="status-item">石材: <span id="inv-stone">0</span></div>
+        <div class="status-item">時代: <span id="era-name" class="era-badge">原初の時代</span></div>
+        <span id="inv-bar" style="display: contents;"></span>
         <div class="status-item gold-item">所持金: <span id="gold">50</span>G</div>
         <div class="status-item">パーティ数: <span id="hero-count">0</span>人</div>
+        <button class="reset-btn" onclick="resetGame()">リセット</button>
     </div>
 
-    <!-- メインレイアウト -->
     <div class="main-layout">
-        <!-- 7割：パズル盤面 -->
         <div class="puzzle-section">
-            <div class="grid" id="grid"></div>
+            <div class="board-wrapper">
+                <div class="guide-row">
+                    <span>⬆️ 上スワイプ: <strong id="guide-up">-</strong></span>
+                </div>
+                <div class="board-middle">
+                    <span id="guide-left" style="writing-mode: vertical-rl; font-size: 0.8rem; color: #aaa; font-weight: bold;">⬅️ 左: -</span>
+                    <div class="grid" id="grid"></div>
+                    <span id="guide-right" style="writing-mode: vertical-rl; font-size: 0.8rem; color: #aaa; font-weight: bold;">➡️ 右: -</span>
+                </div>
+                <div class="guide-row">
+                    <span>⬇️ 下スワイプ: <strong id="guide-down">-</strong></span>
+                </div>
+            </div>
         </div>
 
-        <!-- 3割：ショップ・拠点 -->
         <div class="side-section">
-            <div class="shop-title">ショップ・拠点</div>
-            
-            <div class="shop-item">
-                <div><b>木材売却</b> (1個)<br><small>➔ 2 GOLD</small></div>
-                <button onclick="sellMaterial('wood', 1, 2)">売却</button>
-            </div>
+            <div class="shop-title">時代の進行・進化</div>
+            <div id="era-shop-list"></div>
 
-            <div class="shop-item">
-                <div><b>石材売却</b> (1個)<br><small>➔ 3 GOLD</small></div>
-                <button onclick="sellMaterial('stone', 1, 3)">売却</button>
-            </div>
+            <div class="shop-title">資材売却</div>
+            <div id="sell-list"></div>
 
+            <div class="shop-title">施設・雇用</div>
             <div class="shop-item">
                 <div><b>使い捨て勇者</b><br><small>費用: 20G</small></div>
-                <button onclick="hireHero('single')">雇う</button>
+                <button onclick="hireHero('single', 20, '使い捨て勇者')">雇う</button>
             </div>
 
             <div class="shop-item">
                 <div><b>終身雇用勇者</b><br><small>費用: 100G</small></div>
-                <button onclick="hireHero('permanent')">雇う</button>
+                <button onclick="hireHero('permanent', 100, '終身勇者')">雇う</button>
             </div>
 
             <div class="shop-item">
@@ -189,62 +205,192 @@
         </div>
     </div>
 
-    <!-- 下部：冒険ログ -->
     <div class="log-section" id="log-section">
         <div class="log-entry">冒険の準備が整いました。</div>
     </div>
 
 <script>
-    /* ==========================================
-     * 1. 定数・グローバル変数定義
-     * ========================================== */
-    const SIZE = 5; // 5x5盤面
-    let board = Array(SIZE * SIZE).fill(null); // 盤面の状態（null または タイルオブジェクト）
-    let inventory = { wood: 0, stone: 0 };    // 資材の所持数
-    let gold = 50;                             // 所持金
-    let heroes = [];                           // 雇用した勇者リスト
-    let isGameOver = false;                    // 詰み（ゲームオーバー）フラグ
-    
-    // 階層②（資材）の漢数字マッピング
-    const kanjiMap = { 1: '一', 2: '二', 4: '四', 8: '八', 16: '十六' };
+    const CONFIG = {
+        completeBonus: 30,
+        adventureIntervalMs: 2500,
+        cardMax: 16,
+    };
+
+    const MATERIALS = {
+        wood:   { name: '木材', sell: 2, cardBg: '#8d5524', cardBd: '#ffcc99', matBg: '#5c3a21', matFg: '#ffe0b2', matBd: '#ffb74d' },
+        stone:  { name: '石材', sell: 3, cardBg: '#708090', cardBd: '#dcdcdc', matBg: '#3b4c5c', matFg: '#e0f7fa', matBd: '#4dd0e1' },
+        copper: { name: '銅',   sell: 5, cardBg: '#b87333', cardBd: '#f4c7a1', matBg: '#6b3a1e', matFg: '#ffd9bf', matBd: '#e8895a' },
+        iron:   { name: '鉄',   sell: 8, cardBg: '#4b5563', cardBd: '#b8c2d6', matBg: '#262b36', matFg: '#e6ebf5', matBd: '#8da2e0' },
+    };
+
+    const ERAS = {
+        primal: { name: '原初の時代', cost: 0,   unlocked: true,  sides: { up: 'wood', down: 'wood', left: 'stone', right: 'stone' }, next: 'copper' },
+        copper: { name: '銅の時代',   cost: 150, unlocked: false, sides: { up: 'wood', down: 'copper', left: 'stone', right: 'stone' }, next: 'iron' },
+        iron:   { name: '鉄の時代',   cost: 500, unlocked: false, sides: { up: 'wood', down: 'copper', left: 'stone', right: 'iron' }, next: null },
+    };
+    let currentEra = 'primal';
 
     /* ==========================================
-     * 2. 初期化・スポーン処理
+     * 冒険イベントリスト（データ定義化）
      * ========================================== */
+    const ADVENTURE_EVENTS = [
+        {
+            weight: 30,
+            text: h => `⚔️ ${h.name}が魔物を撃破しました！ (+5G)`,
+            effect: () => { gold += 5; },
+            type: 'event'
+        },
+        {
+            weight: 25,
+            text: h => `🌲 ${h.name}が森林で木材を調達しました！ (+2木材)`,
+            effect: () => { inventory.wood = (inventory.wood || 0) + 2; },
+            type: 'reward'
+        },
+        {
+            weight: 20,
+            text: h => `⛏️ ${h.name}が岩山から石材を削り出しました！ (+2石材)`,
+            effect: () => { inventory.stone = (inventory.stone || 0) + 2; },
+            type: 'reward'
+        },
+        {
+            weight: 10,
+            text: h => `💎 ${h.name}が隠された宝箱を発見しました！ (+15G)`,
+            effect: () => { gold += 15; },
+            type: 'reward'
+        },
+        {
+            weight: 10,
+            text: h => `💀 ${h.name}が毒キノコを誤飲して治療費を払いました... (-3G)`,
+            effect: () => { gold = Math.max(0, gold - 3); },
+            type: 'danger'
+        },
+        {
+            weight: 15,
+            text: h => `⛰️ ${h.name}は静かに未開の地を探索中...`,
+            effect: () => {},
+            type: ''
+        },
+        {
+            weight: 10,
+            text: h => `🍺 ${h.name}は酒場で英気を養っています。`,
+            effect: () => {},
+            type: ''
+        }
+    ];
+
+    const SIZE = 5;
+    const kanjiMap = { 1: '一', 2: '二', 4: '四', 8: '八', 16: '十六' };
+
+    let board = Array(SIZE * SIZE).fill(null);
+    let inventory = {};
+    let gold = 50;
+    let heroes = [];
+    let isGameOver = false;
+    let adventureTimer = null;
+
+    function activeMaterials() { 
+        return [...new Set(Object.values(ERAS[currentEra].sides))]; 
+    }
+
+    function setTileVars(cell, type) {
+        const m = MATERIALS[type];
+        cell.style.setProperty('--card-bg', m.cardBg);
+        cell.style.setProperty('--card-bd', m.cardBd);
+        cell.style.setProperty('--mat-bg', m.matBg);
+        cell.style.setProperty('--mat-fg', m.matFg);
+        cell.style.setProperty('--mat-bd', m.matBd);
+        cell.style.setProperty('--mat-glow', m.matBd + '4d');
+    }
+
     function initGame() {
         board.fill(null);
-        inventory = { wood: 0, stone: 0 };
+        for (const k of Object.keys(MATERIALS)) {
+            if (!(k in inventory)) inventory[k] = 0;
+        }
         gold = 50;
         heroes = [];
         isGameOver = false;
-        
-        // 初期タイルをランダムに配置
-        spawnTile('wood');
-        spawnTile('stone');
+
+        renderShop();
+        updateDirectionGuides();
+
+        const sides = ERAS[currentEra].sides;
+        spawnTile(sides.up);
+        spawnTile(sides.left);
         updateView();
+
+        if (adventureTimer) clearInterval(adventureTimer);
+        adventureTimer = setInterval(adventureLoop, CONFIG.adventureIntervalMs);
         
-        // 冒険オート進行ループ（2.5秒ごと）
-        setInterval(adventureLoop, 2500);
+        addLog('ゲームを開始しました。');
     }
 
-    // 指定されたタイプの新規タイル（階層1の「1」）を空きマスにランダム生成
+    function resetGame() {
+        initGame();
+        addLog('【リセット】盤面とステータスを初期化しました。', 'event');
+    }
+
+    function updateDirectionGuides() {
+        const sides = ERAS[currentEra].sides;
+        document.getElementById('guide-up').innerText = MATERIALS[sides.up].name;
+        document.getElementById('guide-down').innerText = MATERIALS[sides.down].name;
+        document.getElementById('guide-left').innerText = `⬅️ 左: ${MATERIALS[sides.left].name}`;
+        document.getElementById('guide-right').innerText = `➡️ 右: ${MATERIALS[sides.right].name}`;
+    }
+
+    function unlockNextEra(nextEraId) {
+        const eraDef = ERAS[nextEraId];
+        if (gold >= eraDef.cost) {
+            gold -= eraDef.cost;
+            eraDef.unlocked = true;
+            currentEra = nextEraId;
+            
+            addLog(`🎉 【時代の解放】${eraDef.name} に進化しました！新たな素材が出現します。`, 'event');
+            renderShop();
+            updateDirectionGuides();
+            updateView();
+        } else {
+            addLog(`ゴールドが足りません！（必要: ${eraDef.cost}G）`);
+        }
+    }
+
+    function renderShop() {
+        const eraContainer = document.getElementById('era-shop-list');
+        eraContainer.innerHTML = '';
+
+        let nextEraKey = ERAS[currentEra].next;
+        if (nextEraKey && !ERAS[nextEraKey].unlocked) {
+            const nextEra = ERAS[nextEraKey];
+            eraContainer.innerHTML = `
+                <div class="shop-item era-item">
+                    <div><b>${nextEra.name}の解放</b><br><small>費用: ${nextEra.cost} G</small></div>
+                    <button onclick="unlockNextEra('${nextEraKey}')">解放</button>
+                </div>
+            `;
+        } else {
+            eraContainer.innerHTML = `<div style="font-size:0.8rem; color:#aaa; padding:4px;">最高レベルの時代に達しています。</div>`;
+        }
+
+        document.getElementById('sell-list').innerHTML = activeMaterials().map(k => {
+            const m = MATERIALS[k];
+            return `<div class="shop-item"><div><b>${m.name}売却</b> (1個)<br><small>➔ ${m.sell} GOLD</small></div>` +
+                   `<button onclick="sellMaterial('${k}', 1)">売却</button></div>`;
+        }).join('');
+    }
+
     function spawnTile(type) {
         let emptyIndexes = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
-        
-        // 空きマスがない場合
         if (emptyIndexes.length === 0) {
             checkGameOver();
             return;
         }
-        
         let idx = emptyIndexes[Math.floor(Math.random() * emptyIndexes.length)];
         board[idx] = { type: type, tier: 1, val: 1 };
     }
 
-    /* ==========================================
-     * 3. 描画更新処理 (View)
-     * ========================================== */
     function updateView() {
+        document.getElementById('era-name').innerText = ERAS[currentEra].name;
+
         const gridEl = document.getElementById('grid');
         gridEl.innerHTML = '';
         
@@ -253,85 +399,73 @@
             cell.className = 'cell';
             if (tile) {
                 if (tile.tier === 1) {
-                    // 階層①（札：アラビア数字）
-                    cell.classList.add(`tile-card-${tile.type}`);
+                    cell.classList.add('tile-card');
+                    setTileVars(cell, tile.type);
                     cell.innerText = tile.val;
                 } else {
-                    // 階層②（資材：漢数字）
-                    cell.classList.add(`tile-mat-${tile.type}`);
+                    cell.classList.add('tile-mat');
+                    setTileVars(cell, tile.type);
                     cell.innerText = kanjiMap[tile.val] || tile.val;
-                    // クリックで手動回収（途中回収）可能
                     cell.onclick = () => harvestTile(idx);
                 }
             }
             gridEl.appendChild(cell);
         });
 
-        // ステータス表示の更新
-        document.getElementById('inv-wood').innerText = inventory.wood;
-        document.getElementById('inv-stone').innerText = inventory.stone;
+        document.getElementById('inv-bar').innerHTML = activeMaterials()
+            .map(k => `<div class="status-item">${MATERIALS[k].name}: <span>${inventory[k] || 0}</span></div>`).join('');
         document.getElementById('gold').innerText = gold;
         document.getElementById('hero-count').innerText = heroes.length;
     }
 
-    /* ==========================================
-     * 4. ゲームルール・パズル処理 (Logic)
-     * ========================================== */
-
-    // 漢数字タイルの手動回収処理
     function harvestTile(idx) {
-        if (isGameOver) return;
         let tile = board[idx];
         if (tile && tile.tier === 2) {
-            inventory[tile.type] += tile.val;
-            addLog(`【手動回収】${tile.type === 'wood' ? '木材' : '石材'}を${tile.val}個ストックしました。`, 'reward');
+            inventory[tile.type] = (inventory[tile.type] || 0) + tile.val;
+            addLog(`【手動回収】${MATERIALS[tile.type].name}を${tile.val}個ストックしました。`, 'reward');
             board[idx] = null;
+            
+            if (isGameOver) {
+                isGameOver = false;
+                addLog(`✨ 盤面に空きができたため、ゲーム再開できます！`, 'event');
+            }
             updateView();
         }
     }
 
-    // 詰み（ゲームオーバー）判定
     function checkGameOver() {
-        // 1. 空きマスがあるかチェック
         let hasEmpty = board.some(v => v === null);
-        if (hasEmpty) return; // 空きがあれば詰んでない
+        if (hasEmpty) return;
 
-        // 2. 隣接する同種・同階層・同値のペアがあるかチェック
         for (let r = 0; r < SIZE; r++) {
             for (let c = 0; c < SIZE; c++) {
                 let current = board[r * SIZE + c];
                 if (!current) continue;
-                // 右隣をチェック
                 if (c < SIZE - 1) {
                     let right = board[r * SIZE + (c + 1)];
                     if (right && right.type === current.type && right.tier === current.tier && right.val === current.val) return;
                 }
-                // 下隣をチェック
                 if (r < SIZE - 1) {
                     let down = board[(r + 1) * SIZE + c];
                     if (down && down.type === current.type && down.tier === current.tier && down.val === current.val) return;
                 }
             }
         }
-
-        // どちらも該当しない場合は「詰み」
         isGameOver = true;
-        addLog(`⚠️ 【詰み】盤面が埋まり、動かせなくなりました！「リセット」してください。`, 'gameover');
+        addLog(`⚠️ 【詰み】盤面が埋まりました！漢数字タイルをクリックして回収するか、「リセット」してください。`, 'gameover');
     }
 
-    /* ==========================================
-     * 5. キーボード入力・スワイプ処理
-     * ========================================== */
     document.addEventListener('keydown', e => {
         if (isGameOver) return;
         let moved = false;
         let supplyType = null;
 
-        // 上下スワイプ時は木材系(wood)が供給、左右スワイプ時は石材系(stone)が供給
-        if (e.key === 'ArrowLeft') { moved = slide('left'); supplyType = 'stone'; }
-        else if (e.key === 'ArrowRight') { moved = slide('right'); supplyType = 'stone'; }
-        else if (e.key === 'ArrowUp') { moved = slide('up'); supplyType = 'wood'; }
-        else if (e.key === 'ArrowDown') { moved = slide('down'); supplyType = 'wood'; }
+        const dirs = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+        const dir = dirs[e.key];
+        if (dir) { 
+            moved = slide(dir); 
+            supplyType = ERAS[currentEra].sides[dir]; 
+        }
 
         if (moved) {
             spawnTile(supplyType);
@@ -340,7 +474,6 @@
         }
     });
 
-    // スライド処理（左方向へのマージ計算に全方向を合わせるため盤面を回転させる共通ロジック）
     function slide(direction) {
         let rotCount = 0;
         if (direction === 'right') rotCount = 2;
@@ -362,7 +495,6 @@
         return changed;
     }
 
-    // 盤面を90度時計回りに回転させるヘルパー
     function rotateBoard() {
         let newBoard = Array(SIZE * SIZE).fill(null);
         for (let r = 0; r < SIZE; r++) {
@@ -373,7 +505,6 @@
         board = newBoard;
     }
 
-    // 1行分のマージ・合体ルール処理
     function processRow(row) {
         let filtered = row.filter(t => t !== null);
         let newRow = [];
@@ -383,20 +514,18 @@
             let current = filtered[i];
             let next = filtered[i + 1];
 
-            // 同じ種類・同じ階層・同じ数値の場合に合体
             if (next && current.type === next.type && current.tier === next.tier && current.val === next.val) {
                 let newVal = current.val * 2;
                 let newTier = current.tier;
+                let matName = MATERIALS[current.type].name;
 
-                if (newTier === 1 && newVal >= 16) {
-                    // 階層1の16到達 ⇒ 階層2（資材・漢数字の「一」）へ進化
+                if (newTier === 1 && newVal >= CONFIG.cardMax) {
                     newTier = 2;
                     newVal = 1;
                     moved = true;
-                } else if (newTier === 2 && newVal >= 16) {
-                    // 階層2の16到達 ⇒ 自動完走ボーナス（資材＋30個）
-                    inventory[current.type] += 30;
-                    addLog(`🎉 【16完走ボーナス】${current.type === 'wood' ? '木材' : '石材'}x30獲得！`, 'reward');
+                } else if (newTier === 2 && newVal >= CONFIG.cardMax) {
+                    inventory[current.type] = (inventory[current.type] || 0) + CONFIG.completeBonus;
+                    addLog(`🎉 【完走ボーナス】${matName}x${CONFIG.completeBonus}を獲得しました！`, 'reward');
                     newRow.push(null);
                     i++;
                     moved = true;
@@ -415,7 +544,6 @@
         if (newRow.length !== row.filter(t => t !== null).length) moved = true;
         while (newRow.length < SIZE) newRow.push(null);
 
-        // 位置や値の変化比較
         for (let i = 0; i < SIZE; i++) {
             if ((row[i] === null) !== (newRow[i] === null) || 
                 (row[i] && newRow[i] && (row[i].val !== newRow[i].val || row[i].tier !== newRow[i].tier))) {
@@ -426,59 +554,67 @@
         return { newRow, moved };
     }
 
-    /* ==========================================
-     * 6. ショップ・経済・冒険システム
-     * ========================================== */
-    function sellMaterial(type, amount, price) {
-        if (inventory[type] >= amount) {
+    function sellMaterial(type, amount) {
+        let price = MATERIALS[type].sell * amount;
+        if ((inventory[type] || 0) >= amount) {
             inventory[type] -= amount;
             gold += price;
-            addLog(`【売却】${type === 'wood' ? '木材' : '石材'}x${amount} を売却 (+${price}G)`);
+            addLog(`【売却】${MATERIALS[type].name}x${amount} を売却 (+${price}G)`);
             updateView();
         } else {
-            addLog(`資材が足りません！`);
+            addLog(`資材が足りません。`);
         }
     }
 
-    function hireHero(type) {
-        let cost = type === 'single' ? 20 : 100;
+    function hireHero(type, cost, heroName) {
         if (gold >= cost) {
             gold -= cost;
-            heroes.push({ type: type, name: type === 'single' ? '使い捨て勇者' : '終身勇者' });
-            addLog(`【雇用】${type === 'single' ? '使い捨て勇者' : '終身雇用勇者'}を雇いました！`, 'event');
+            heroes.push({ type: type, name: heroName });
+            addLog(`【雇用】${heroName}を雇いました！`, 'event');
             updateView();
         } else {
-            addLog(`ゴールドが足りません！`);
+            addLog(`ゴールドが足りません。`);
         }
     }
 
     function craftWeapon(weaponName, matType, cost) {
-        if (inventory[matType] >= cost) {
+        if ((inventory[matType] || 0) >= cost) {
             inventory[matType] -= cost;
             addLog(`【クラフト】${weaponName} を作成・支給しました！`, 'event');
             updateView();
         } else {
-            addLog(`クラフト素材が足りません！`);
+            addLog(`クラフト素材が足りません。`);
         }
     }
 
-    // 冒険オート進行ループ
+    /* ==========================================
+     * 拡張された冒険ループ関数
+     * ========================================== */
     function adventureLoop() {
         if (heroes.length === 0) return;
+        
+        // ランダムに勇者を1名抽出
         let h = heroes[Math.floor(Math.random() * heroes.length)];
-        let events = [
-            `⚔️ ${h.name}が魔物を撃破！ (+5G)`,
-            `🌲 ${h.name}が木材を持ち帰った！ (+1木材)`,
-            `⛰️ ${h.name}が探索中...`
-        ];
-        let evtIndex = Math.floor(Math.random() * events.length);
-        addLog(events[evtIndex]);
-        if (evtIndex === 0) gold += 5;
-        if (evtIndex === 1) inventory.wood += 1;
+
+        // 重みに応じたランダム抽選処理
+        let totalWeight = ADVENTURE_EVENTS.reduce((sum, e) => sum + e.weight, 0);
+        let rand = Math.floor(Math.random() * totalWeight);
+        
+        let selectedEvent = ADVENTURE_EVENTS[0];
+        for (let evt of ADVENTURE_EVENTS) {
+            if (rand < evt.weight) {
+                selectedEvent = evt;
+                break;
+            }
+            rand -= evt.weight;
+        }
+
+        // イベント効果の適用とログ出力
+        selectedEvent.effect();
+        addLog(selectedEvent.text(h), selectedEvent.type);
         updateView();
     }
 
-    // ログ追加ヘルパー
     function addLog(text, className = '') {
         const logSec = document.getElementById('log-section');
         const entry = document.createElement('div');
@@ -487,7 +623,6 @@
         logSec.prepend(entry);
     }
 
-    // ゲーム開始実行
     initGame();
 </script>
 
