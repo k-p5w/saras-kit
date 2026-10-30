@@ -1,5 +1,31 @@
 /* app.js：施設・時代・売却・冒険ループ・初期化（最後に読み込む）
  * 依存: data.js / system.js / puzzle.js / party.js / ui.js / renderShop.js */
+
+
+// 資材を半分にして盤面をリセットする（コンティニュー）関数
+function resetBoardWithPenalty() {
+    // 1. 所持している全資材を半分にする（小数切り捨て）
+    for (const k in inventory) {
+        inventory[k] = Math.floor(inventory[k] / 2);
+        // 0になったら消す、またはそのままでもOK
+        if (inventory[k] <= 0) delete inventory[k];
+    }
+
+    // 2. 盤面（board）を初期化する
+    board = Array(SIZE * SIZE).fill(null);
+    
+    // 3. ゲームオーバーフラグを解除して、新しいタイルを配る
+    isGameOver = false;
+    spawnTile('up');
+    spawnTile('left');
+
+    // 4. 画面を更新してセーブ
+    updateView();
+    saveGame();
+
+    addLog('⚠️ 代償として資材が半分になりましたが、盤面がリセットされ冒険を継続します！', 'warning');
+}
+
 /* ==========================================
  * 施設・時代・売却
  * ========================================== */
@@ -11,6 +37,7 @@ function buildFacility(facKey) {
     if (lack) { addLog(`資材が足りません！（${MATERIALS[lack[0]].name}${lack[1]}個が必要）`, 'danger'); return; }
     for (const [k, n] of Object.entries(fac.cost)) inventory[k] -= n;
     fac.unlocked = true;
+    if (syncBoardSize()) addLog(`🗺️ 盤面が${SIZE}×${SIZE}に広がりました！`, 'event');
     addLog(`🏗️ 【施設建築】${fac.name}を建築しました！${fac.adds ? '盤面に新しい素材が混ざります。' : '他の仲間が雇用可能です。'}`, 'event');
     renderShop();
     updateDirectionGuides();
@@ -77,12 +104,13 @@ function adventureLoop() {
     // 行動消費
     h.stamina--;
 
-    // イベント選定＆実行
-    let totalWeight = ADVENTURE_EVENTS.reduce((sum, e) => sum + e.weight, 0);
+    // イベント選定＆実行（condition があるイベントは、条件を満たすときだけ抽選に入る）
+    const pool = ADVENTURE_EVENTS.filter(e => !e.condition || e.condition());
+    let totalWeight = pool.reduce((sum, e) => sum + e.weight, 0);
     let rand = Math.floor(Math.random() * totalWeight);
 
-    let selectedEvent = ADVENTURE_EVENTS[0];
-    for (let evt of ADVENTURE_EVENTS) {
+    let selectedEvent = pool[0];
+    for (let evt of pool) {
         if (rand < evt.weight) {
             selectedEvent = evt;
             break;
@@ -105,9 +133,10 @@ function adventureLoop() {
 
         // 帰還ログのテキスト生成
         let summary = [];
-        if (h.loot.gold > 0) summary.push(`${h.loot.gold}G`);
-        if (h.loot.wood > 0) summary.push(`木材x${h.loot.wood}`);
+if (h.loot.wood > 0) summary.push(`木材x${h.loot.wood}`);
         if (h.loot.stone > 0) summary.push(`石材x${h.loot.stone}`);
+        if (h.loot.copper > 0) summary.push(`銅x${h.loot.copper}`);
+        if (h.loot.iron > 0) summary.push(`鉄x${h.loot.iron}`); // ★ 鉄の表示を追加
         let lootStr = summary.length > 0 ? summary.join('、') : '戦利品なし';
 
         if (h.type === 'single') {
@@ -144,9 +173,10 @@ function initGame(isReset = false) {
         return;
     }
 
+    SIZE = 5;   // 新しいゲームは5×5から
     board = Array(SIZE * SIZE).fill(null);
     for (const k of Object.keys(MATERIALS)) inventory[k] = 0;   // 所持数も毎回0に戻す
-    gold = 99999;
+    gold = 100;
     heroes = [];
     turn = 0;
     allResting = false;

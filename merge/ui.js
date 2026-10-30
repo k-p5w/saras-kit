@@ -30,6 +30,7 @@ function updateView() {
     document.getElementById('era-name').innerText = '拠点Lv.' + (1 + Object.values(FACILITIES).filter(f => f.unlocked).length);
 
     const gridEl = document.getElementById('grid');
+    gridEl.style.setProperty('--n', SIZE);
     gridEl.innerHTML = '';
 
     board.forEach((tile, idx) => {

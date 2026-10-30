@@ -19,7 +19,7 @@ function harvestTile(idx) {
         inventory[tile.type] = (inventory[tile.type] || 0) + gain;
         addLog(`【手動回収】${MATERIALS[tile.type].name}を${gain}個ストックしました。`, 'reward');
         board[idx] = null;
-        
+
         if (isGameOver) {
             isGameOver = false;
             addLog(`✨ 盤面に空きができたため、ゲーム再開できます！`, 'event');
@@ -48,30 +48,35 @@ function checkGameOver() {
         }
     }
 
-    if (heroes.length > 0 && Math.random() < 0.8) {
-        let maxVal = -1;
-        let maxIdx = -1;
+    // とりあえずスキルをオフにしておく
+    let IsHealerSkill = false;
+    if (IsHealerSkill) {
 
-        board.forEach((t, i) => {
-            if (t) {
-                let score = t.tier * 100 + t.val;
-                if (score > maxVal) {
-                    maxVal = score;
-                    maxIdx = i;
+        if (heroes.length > 0 && Math.random() < 0.8) {
+            let maxVal = -1;
+            let maxIdx = -1;
+
+            board.forEach((t, i) => {
+                if (t) {
+                    let score = t.tier * 100 + t.val;
+                    if (score > maxVal) {
+                        maxVal = score;
+                        maxIdx = i;
+                    }
                 }
-            }
-        });
+            });
 
-        if (maxIdx !== -1) {
-            let removedTile = board[maxIdx];
-            board[maxIdx] = null;
-            gold += 20;
-            
-            let matName = MATERIALS[removedTile.type].name;
-            addLog(`✨ 【女神の慈悲発動！】最大のマス（${matName}）が消滅し、20Gの恵みを授かりました！`, 'goddess');
-            updateView();
-            saveGame();
-            return;
+            if (maxIdx !== -1) {
+                let removedTile = board[maxIdx];
+                board[maxIdx] = null;
+                gold += 20;
+
+                let matName = MATERIALS[removedTile.type].name;
+                addLog(`✨ 【女神の慈悲発動！】最大のマス（${matName}）が消滅し、20Gの恵みを授かりました！`, 'goddess');
+                updateView();
+                saveGame();
+                return;
+            }
         }
     }
 
@@ -135,13 +140,14 @@ function processRow(row) {
             let newVal = current.val * 2;
             let newTier = current.tier;
             let matName = MATERIALS[current.type].name;
+            inventory[current.type] = (inventory[current.type] || 0) + (current.val * current.tier);
 
             // ティア1で値が上限値に達した場合、ティア2に昇格させる
             if (newTier === 1 && newVal >= CONFIG.cardMax) {
                 newTier = 2;
                 newVal = 1;
                 moved = true;
-            // ティア2で値が上限値に達した場合、完走ボーナスを付与して消去する
+                // ティア2で値が上限値に達した場合、完走ボーナスを付与して消去する
             } else if (newTier === 2 && newVal >= CONFIG.cardMax) {
                 inventory[current.type] = (inventory[current.type] || 0) + CONFIG.completeBonus;
                 addLog(`🎉 【完走ボーナス】${matName}x${CONFIG.completeBonus}を獲得しました！`, 'reward');
@@ -164,13 +170,13 @@ function processRow(row) {
 
     // 要素数が変わった場合は移動・変化があったとみなす
     if (newRow.length !== row.filter(t => t !== null).length) moved = true;
-    
+
     // 行のサイズ(SIZE)に満たない分をnullで埋める
     while (newRow.length < SIZE) newRow.push(null);
 
     // 処理前後の配列を比較し、変化（移動や値の変更）があったかを厳密に判定する
     for (let i = 0; i < SIZE; i++) {
-        if ((row[i] === null) !== (newRow[i] === null) || 
+        if ((row[i] === null) !== (newRow[i] === null) ||
             (row[i] && newRow[i] && (row[i].val !== newRow[i].val || row[i].tier !== newRow[i].tier))) {
             moved = true;
         }

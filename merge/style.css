@@ -92,11 +92,12 @@ body {
 }
 .guide-chip.side { writing-mode: vertical-rl; padding: 10px 3px; font-size: 0.8rem; flex-shrink: 0; }
 
-/* 盤面：5x5。マスの大きさは画面幅の13%（最大70px）。左右のチップ分、元の14vwから少し小さくした */
+/* 盤面：N×N（--n はJSが設定）。マスの大きさは、画面の幅・高さ・上限70pxのうち一番小さいもの */
 .grid {
     display: grid;
-    grid-template-columns: repeat(5, min(13vw, 70px));
-    grid-template-rows: repeat(5, min(13vw, 70px));
+    --cell: min(calc((100vw - 110px - 5px * (var(--n, 5) - 1)) / var(--n, 5)), calc((100vh - 340px - 5px * (var(--n, 5) - 1)) / var(--n, 5)), 70px);
+    grid-template-columns: repeat(var(--n, 5), var(--cell));
+    grid-template-rows: repeat(var(--n, 5), var(--cell));
     gap: 5px;
     background: #111;
     padding: 6px;
@@ -286,3 +287,71 @@ body {
 .shop-item.locked button { background: #555; cursor: not-allowed; }
 
 
+/* --- 手引きボタン --- */
+.help-btn {
+    background: #0288d1;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.75rem;
+}
+
+/* --- 手引きモーダル用の調整 --- */
+.modal-box.guide-box {
+    border-color: #0288d1;
+    box-shadow: 0 0 25px rgba(2, 136, 209, 0.4);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-box.guide-box h2 {
+    color: #4fc3f7;
+}
+
+.guide-content {
+    text-align: left;
+    overflow-y: auto;
+    margin: 12px 0 20px 0;
+    padding-right: 6px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.guide-content section {
+    margin-bottom: 14px;
+}
+
+.guide-content h3 {
+    font-size: 0.95rem;
+    color: #ffd700;
+    margin-bottom: 4px;
+    border-bottom: 1px dashed #555;
+    padding-bottom: 2px;
+}
+
+.guide-content ul {
+    padding-left: 18px;
+    margin-top: 4px;
+}
+
+.guide-content li {
+    margin-bottom: 4px;
+}
+
+/* --- 既存のロック時のスタイル（必要に応じて調整） --- */
+.shop-item.locked { opacity: 0.5; }
+.shop-item.locked button { background: #555; cursor: not-allowed; }
+
+.shop-item button:disabled, 
+button:disabled {
+    background: #444 !important;
+    color: #888 !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+    border: 1px solid #555;
+    box-shadow: none;
+}
