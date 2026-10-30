@@ -2,9 +2,11 @@
  * データ設定・定数定義
  * ========================================== */
 const CONFIG = {
-    completeBonus: 30,
-    adventureIntervalMs: 2500,
+    completeBonus: 300,   // 漢数字を「十六」まで完走した合体ボーナス（八を2つ回収＝160個より多くしてある）
+    harvestRate: 10,      // 漢数字を回収したとき、表示の値 × この数だけ資材がもらえる
     cardMax: 16,
+    staminaMax: 3,   // 勇者の行動力の最大値（動くと1減る）
+    regenDays: 2,    // 動かなかった日がこの回数たまると、行動力が1回復
 };
 
 const SAVE_KEY = 'xyz';
@@ -12,67 +14,83 @@ const SAVE_KEY = 'xyz';
 const CONFIG_GEAR = { buybackRate: 0.5, heroPower: 10 };
 
 const GEAR = {
-    wood_sword: { era: 'primal', name: '木剣', power: 3, cost: { wood: 10 } },
-    stone_sword: { era: 'primal', name: '石剣', power: 6, cost: { stone: 15, wood: 5 } },
-    copper_sword: { era: 'copper', name: '銅剣', power: 10, cost: { copper: 15, wood: 5 } },
-    iron_sword: { era: 'iron', name: '鉄剣', power: 16, cost: { iron: 20, wood: 5 } },
+    wood_sword:   { needs: null, name: '木剣', power: 3,  cost: { wood: 10 } },
+    stone_sword:  { needs: null, name: '石剣', power: 6,  cost: { stone: 15, wood: 5 } },
+    copper_sword: { needs: 'copper_mine', name: '銅剣', power: 10, cost: { copper: 15, wood: 5 } },
+    iron_sword:   { needs: 'iron_mine', name: '鉄剣', power: 16, cost: { iron: 20, wood: 5 } },
 };
-const gearPower = h => (h.gear ? GEAR[h.gear].power : 0);
-const canEquip = h => h.type !== 'single';   // 使い捨て勇者は装備なし
-const partyPower = () => heroes.reduce((s, h) => s + CONFIG_GEAR.heroPower + gearPower(h), 0);
-
 
 
 const MATERIALS = {
-    wood: { name: '木材', sell: 2, cardBg: '#8d5524', cardBd: '#ffcc99', matBg: '#5c3a21', matFg: '#ffe0b2', matBd: '#ffb74d' },
-    stone: { name: '石材', sell: 3, cardBg: '#708090', cardBd: '#dcdcdc', matBg: '#3b4c5c', matFg: '#e0f7fa', matBd: '#4dd0e1' },
-    copper: { name: '銅', sell: 5, cardBg: '#d4552b', cardBd: '#ffb199', matBg: '#8a2a14', matFg: '#ffd6c9', matBd: '#ff6b4a' },
-    iron: { name: '鉄', sell: 8, cardBg: '#3f3d9e', cardBd: '#b9b4ff', matBg: '#1e1b4b', matFg: '#e0deff', matBd: '#8b7cf6' },
+    wood:   { name: '木材', sell: 2, cardBg: '#8d5524', cardBd: '#ffcc99', matBg: '#5c3a21', matFg: '#ffe0b2', matBd: '#ffb74d' },
+    stone:  { name: '石材', sell: 3, cardBg: '#708090', cardBd: '#dcdcdc', matBg: '#3b4c5c', matFg: '#e0f7fa', matBd: '#4dd0e1' },
+    copper: { name: '銅',   sell: 5, cardBg: '#d4552b', cardBd: '#ffb199', matBg: '#8a2a14', matFg: '#ffd6c9', matBd: '#ff6b4a' },
+iron:   { name: '鉄',   sell: 8, cardBg: '#3f3d9e', cardBd: '#b9b4ff', matBg: '#1e1b4b', matFg: '#e0deff', matBd: '#8b7cf6' },
 };
 
-const ERAS = {
-    primal: { name: '原初の時代', cost: 0, unlocked: true, sides: { up: 'wood', down: 'wood', left: 'stone', right: 'stone' }, next: 'copper' },
-    copper: { name: '銅の時代', cost: 150, unlocked: false, sides: { up: 'wood', down: 'copper', left: 'stone', right: 'stone' }, next: 'iron' },
-    iron: { name: '鉄の時代', cost: 500, unlocked: false, sides: { up: 'wood', down: 'copper', left: 'stone', right: 'iron' }, next: null },
-};
 
+// 辺ごとの初期の素材（古い順）
+const BASE_SIDES = { up: ['wood'], down: ['wood'], left: ['stone'], right: ['stone'] };
+const DIR_JP = { up: '上', down: '下', left: '左', right: '右' };
+
+// 拠点の施設：資材で建てる。adds があれば、建てたあと、その辺に素材が混ざる
 const FACILITIES = {
-    tavern: { name: '酒場', cost: 50, unlocked: false, desc: '他の仲間を雇用できるようになる' }
+    tavern:      { name: '酒場',   cost: { wood: 100, stone: 60 },  unlocked: false, desc: '他の仲間を雇用できるようになる' },
+    copper_mine: { name: '銅山',   cost: { wood: 120, stone: 80 },  unlocked: false, adds: { down: 'copper' } },
+    iron_mine:   { name: '鉄鉱山', cost: { copper: 60, stone: 150 }, unlocked: false, adds: { right: 'iron' }, needs: 'copper_mine' },
 };
+const gearOpen = g => !g.needs || FACILITIES[g.needs].unlocked;
+const facAvailable = f => !f.unlocked && (!f.needs || FACILITIES[f.needs].unlocked);
+
+// その辺から出る素材（古い順）
+function sideMats(dir) {
+    const list = [...BASE_SIDES[dir]];
+    for (const f of Object.values(FACILITIES)) if (f.unlocked && f.adds && f.adds[dir]) list.push(f.adds[dir]);
+    return list;
+}
+function activeMaterials() { return [...new Set(['up', 'down', 'left', 'right'].flatMap(sideMats))]; }
+
+// その辺から出る札を1枚決める。1辺に1種類なら値は1か2、2種類以上なら、古い素材は2・追加分は1
+function rollSupply(dir) {
+    const mats = sideMats(dir);
+    const type = mats[Math.floor(Math.random() * mats.length)];
+    const vals = mats.length === 1 ? [1, 2] : (type === mats[0] ? [2] : [1]);
+    return { type, val: vals[Math.floor(Math.random() * vals.length)] };
+}
 
 /* ==========================================
  * 外征イベント（戦利品を一時保持する形式）
  * ========================================== */
 const ADVENTURE_EVENTS = [
-    {
-        weight: 25,
-        text: h => `⚔️ ${h.name}が魔物を撃破し、戦利品を獲得！ (+10G)`,
-        effect: (h) => { h.loot.gold += 10; },
-        type: 'event'
+    { 
+        weight: 25, 
+        text: h => `⚔️ ${h.name}が魔物を撃破し、戦利品を獲得！ (+10G)`, 
+        effect: (h) => { h.loot.gold += 10; }, 
+        type: 'event' 
     },
-    {
-        weight: 25,
-        text: h => `🌲 ${h.name}が森林で伐採を行いました！ (+3木材)`,
-        effect: (h) => { h.loot.wood += 3; },
-        type: 'reward'
+    { 
+        weight: 25, 
+        text: h => `🌲 ${h.name}が森林で伐採を行いました！ (+3木材)`, 
+        effect: (h) => { h.loot.wood += 3; }, 
+        type: 'reward' 
     },
-    {
-        weight: 20,
-        text: h => `⛏️ ${h.name}が岩山で採掘を行いました！ (+3石材)`,
-        effect: (h) => { h.loot.stone += 3; },
-        type: 'reward'
+    { 
+        weight: 20, 
+        text: h => `⛏️ ${h.name}が岩山で採掘を行いました！ (+3石材)`, 
+        effect: (h) => { h.loot.stone += 3; }, 
+        type: 'reward' 
     },
-    {
-        weight: 15,
-        text: h => `💎 ${h.name}が宝箱を発見して荷物に詰めました！ (+25G)`,
-        effect: (h) => { h.loot.gold += 25; },
-        type: 'reward'
+    { 
+        weight: 15, 
+        text: h => `💎 ${h.name}が宝箱を発見して荷物に詰めました！ (+25G)`, 
+        effect: (h) => { h.loot.gold += 25; }, 
+        type: 'reward' 
     },
-    {
-        weight: 15,
-        text: h => `⛰️ ${h.name}は慎重に周囲を探索中……`,
-        effect: (h) => { },
-        type: ''
+    { 
+        weight: 15, 
+        text: h => `⛰️ ${h.name}は慎重に周囲を探索中……`, 
+        effect: (h) => {}, 
+        type: '' 
     }
 ];
 
@@ -80,12 +98,11 @@ const SIZE = 5;
 const kanjiMap = { 1: '一', 2: '二', 4: '四', 8: '八', 16: '十六' };
 
 // グローバル状態変数
-let currentEra = 'primal';
 let board = Array(SIZE * SIZE).fill(null);
 let inventory = {};
 let gold = 5000;
 let heroes = [];
 let isGameOver = false;
-let adventureTimer = null;
+let turn = 0;               // 経過日数（1スワイプ＝1日）
+let allResting = false;     // 全員が休息中のとき、ログを1回だけ出すための目印
 
-function activeMaterials() { return [...new Set(Object.values(ERAS[currentEra].sides))]; }

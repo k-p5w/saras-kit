@@ -6,7 +6,7 @@ function addLog(text, className = '') {
     if (!logSec) return;
     const entry = document.createElement('div');
     entry.className = `log-entry ${className}`;
-    entry.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
+    entry.innerText = `[Day ${turn}] ${text}`;
     logSec.prepend(entry);
 }
 
@@ -31,13 +31,12 @@ function switchTab(tab) {
 function saveGame() {
     try {
         const saveData = {
-            currentEra,
             board,
             inventory,
             gold,
             heroes,
-            tavernUnlocked: FACILITIES.tavern.unlocked,
-            eras: ERAS
+            turn,
+            facilities: Object.fromEntries(Object.entries(FACILITIES).map(([k, f]) => [k, f.unlocked]))
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
     } catch (e) {
@@ -50,18 +49,18 @@ function loadGame() {
         const data = localStorage.getItem(SAVE_KEY);
         if (!data) return false;
         const parsed = JSON.parse(data);
-        currentEra = parsed.currentEra || 'primal';
         board = parsed.board || Array(SIZE * SIZE).fill(null);
         inventory = parsed.inventory || {};
         gold = parsed.gold ?? 50;
         heroes = parsed.heroes || [];
-        if (parsed.tavernUnlocked !== undefined) {
-            FACILITIES.tavern.unlocked = parsed.tavernUnlocked;
-        }
-        if (parsed.eras) {
-            for (let k in parsed.eras) {
-                if (ERAS[k]) ERAS[k].unlocked = parsed.eras[k].unlocked;
-            }
+        turn = parsed.turn || 0;
+        for (const f of Object.values(FACILITIES)) f.unlocked = false;
+        if (parsed.facilities) {
+            for (const k in parsed.facilities) if (FACILITIES[k]) FACILITIES[k].unlocked = parsed.facilities[k];
+        } else {   // 旧セーブ（時代方式）の引き継ぎ
+            FACILITIES.tavern.unlocked = !!parsed.tavernUnlocked;
+            if (parsed.eras && parsed.eras.copper && parsed.eras.copper.unlocked) FACILITIES.copper_mine.unlocked = true;
+            if (parsed.eras && parsed.eras.iron && parsed.eras.iron.unlocked) FACILITIES.iron_mine.unlocked = true;
         }
         return true;
     } catch (e) {

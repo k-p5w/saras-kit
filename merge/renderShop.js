@@ -1,33 +1,17 @@
 function renderShop() {
-    const nextEraKey = ERAS[currentEra].next;   // 最初に1回だけ宣言する
     const SHOW_ALL_LOCKED = false;              // true にすると、先の時代の武具も全部グレーで表示
 
-    // 時代進行
-    const eraContainer = document.getElementById('era-shop-list');
-    if (nextEraKey && !ERAS[nextEraKey].unlocked) {
-        const nextEra = ERAS[nextEraKey];
-        eraContainer.innerHTML = `
-            <div class="shop-item era-item">
-                <div><b>${nextEra.name}の解放</b><br><small>費用: ${nextEra.cost} G</small></div>
-                <button onclick="unlockNextEra('${nextEraKey}')">解放</button>
-            </div>
-        `;
-    } else {
-        eraContainer.innerHTML = `<div style="font-size:0.75rem; color:#aaa; padding:2px;">最高レベルの時代です。</div>`;
-    }
-
-    // 施設建築
+    // 拠点の拡張（施設）
     const facContainer = document.getElementById('facility-list');
-    if (!FACILITIES.tavern.unlocked) {
-        facContainer.innerHTML = `
-            <div class="shop-item facility-item">
-                <div><b>酒場の建築</b><br><small>費用: ${FACILITIES.tavern.cost} G</small></div>
-                <button onclick="buildFacility('tavern')">建築</button>
-            </div>
-        `;
-    } else {
-        facContainer.innerHTML = `<div style="font-size:0.75rem; color:#81c784; padding:2px;">✔ 酒場が営業中</div>`;
-    }
+    const costStr = c => Object.entries(c).map(([k, n]) => `${MATERIALS[k].name}${n}`).join(' ');
+    facContainer.innerHTML = Object.entries(FACILITIES).map(([k, f]) => {
+        if (f.unlocked) return `<div style="font-size:0.75rem; color:#81c784; padding:2px;">✔ ${f.name}（稼働中）</div>`;
+        const info = costStr(f.cost) + (f.adds ? '<br>' + Object.entries(f.adds).map(([d, m]) => `${DIR_JP[d]}辺に${MATERIALS[m].name}が混ざる`).join('、') : '');
+        if (f.needs && !FACILITIES[f.needs].unlocked) {
+            return `<div class="shop-item locked"><div><b>🔒 ${f.name}</b><br><small>${FACILITIES[f.needs].name}が必要<br>${info}</small></div><button disabled>未解放</button></div>`;
+        }
+        return `<div class="shop-item facility-item"><div><b>${f.name}の建築</b><br><small>${info}</small></div><button onclick="buildFacility('${k}')">建築</button></div>`;
+    }).join('');
 
     // 仲間雇用
     const tavernContainer = document.getElementById('tavern-list');
@@ -66,14 +50,14 @@ function renderShop() {
 
     // 武具（未解放の次の時代の武具は、グレーで先に見せる）
     document.getElementById('gear-list').innerHTML = Object.entries(GEAR)
-        .filter(([, g]) => ERAS[g.era].unlocked || SHOW_ALL_LOCKED || g.era === nextEraKey)
+        .filter(([, g]) => gearOpen(g) || SHOW_ALL_LOCKED || facAvailable(FACILITIES[g.needs]))
         .map(([k, g]) => {
             const cost = Object.entries(g.cost).map(([m, n]) => `${MATERIALS[m].name}${n}`).join(' ');
 
             // 未解放：グレー表示＋ボタン無効
-            if (!ERAS[g.era].unlocked) {
+            if (!gearOpen(g)) {
                 return `<div class="shop-item locked"><div><b>🔒 ${g.name}</b> (戦力+${g.power})<br>` +
-                    `<small>${ERAS[g.era].name}で解放<br>${cost}</small></div>` +
+                    `<small>${FACILITIES[g.needs].name}で解放<br>${cost}</small></div>` +
                     `<button disabled>未解放</button></div>`;
             }
 

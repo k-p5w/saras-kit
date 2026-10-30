@@ -23,10 +23,11 @@
     </div>
     <!-- 上部ステータスバー -->
     <div class="status-bar">
-        <div class="status-item">時代: <span id="era-name" class="era-badge">原初の時代</span></div>
+        <div class="status-item">拠点: <span id="era-name" class="era-badge">拠点Lv.1</span></div>
         <span id="inv-bar" style="display: contents;"></span>
+        <div class="status-item">Day: <span id="turn">0</span></div>
         <div class="status-item gold-item">所持金: <span id="gold">1</span>G</div>
-        <div class="status-item">パーティ数: <span id="hero-count">0</span>人</div>
+        <div class="status-item">パーティ数: <span id="hero-count">0</span></div>
         <button class="reset-btn" onclick="resetGame()">リセット</button>
     </div>
 
@@ -53,10 +54,7 @@
 
         <!-- ショップ・拠点エリア -->
         <div class="side-section" id="side-section">
-            <div class="shop-title">時代の進行・進化</div>
-            <div id="era-shop-list"></div>
-
-            <div class="shop-title">施設建築・拡張</div>
+            <div class="shop-title">拠点の拡張</div>
             <div id="facility-list"></div>
 
             <div class="shop-title">酒場・仲間雇用</div>
@@ -81,6 +79,8 @@
     <script src="data.js"></script>
     <script src="system.js"></script>
     <script src="puzzle.js"></script>
+    <script src="party.js"></script>
+    <script src="ui.js"></script>
     <script src="renderShop.js"></script>
     <script src="app.js"></script>
 </body>

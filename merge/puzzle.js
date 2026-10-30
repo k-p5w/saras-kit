@@ -1,21 +1,23 @@
 /* ==========================================
  * パズル＆操作ロジック
  * ========================================== */
-function spawnTile(type) {
+function spawnTile(dir) {
     let emptyIndexes = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
     if (emptyIndexes.length === 0) {
         checkGameOver();
         return;
     }
     let idx = emptyIndexes[Math.floor(Math.random() * emptyIndexes.length)];
-    board[idx] = { type: type, tier: 1, val: 1 };
+    const sup = rollSupply(dir);
+    board[idx] = { type: sup.type, tier: 1, val: sup.val };
 }
 
 function harvestTile(idx) {
     let tile = board[idx];
     if (tile && tile.tier === 2) {
-        inventory[tile.type] = (inventory[tile.type] || 0) + tile.val;
-        addLog(`【手動回収】${MATERIALS[tile.type].name}を${tile.val}個ストックしました。`, 'reward');
+        const gain = tile.val * CONFIG.harvestRate;
+        inventory[tile.type] = (inventory[tile.type] || 0) + gain;
+        addLog(`【手動回収】${MATERIALS[tile.type].name}を${gain}個ストックしました。`, 'reward');
         board[idx] = null;
         
         if (isGameOver) {
@@ -79,8 +81,8 @@ function checkGameOver() {
 
 function handleMove(dir) {
     if (slide(dir)) {
-        let supplyType = ERAS[currentEra].sides[dir];
-        spawnTile(supplyType);
+        spawnTile(dir);
+        adventureLoop();   // 1スワイプ＝1日
         updateView();
         checkGameOver();
         saveGame();
@@ -117,46 +119,56 @@ function rotateBoard() {
     }
     board = newBoard;
 }
-
 function processRow(row) {
+    // null（空きマス）を除外した要素のリストを作成
     let filtered = row.filter(t => t !== null);
     let newRow = [];
     let moved = false;
 
+    // 隣り合う要素を比較しながらマージ処理を行う
     for (let i = 0; i < filtered.length; i++) {
         let current = filtered[i];
         let next = filtered[i + 1];
 
+        // 種類(type)、ティア(tier)、値(val)がすべて同じ場合はマージする
         if (next && current.type === next.type && current.tier === next.tier && current.val === next.val) {
             let newVal = current.val * 2;
             let newTier = current.tier;
             let matName = MATERIALS[current.type].name;
 
+            // ティア1で値が上限値に達した場合、ティア2に昇格させる
             if (newTier === 1 && newVal >= CONFIG.cardMax) {
                 newTier = 2;
                 newVal = 1;
                 moved = true;
+            // ティア2で値が上限値に達した場合、完走ボーナスを付与して消去する
             } else if (newTier === 2 && newVal >= CONFIG.cardMax) {
                 inventory[current.type] = (inventory[current.type] || 0) + CONFIG.completeBonus;
                 addLog(`🎉 【完走ボーナス】${matName}x${CONFIG.completeBonus}を獲得しました！`, 'reward');
                 newRow.push(null);
-                i++;
+                i++; // 次の要素も消費済みなのでスキップ
                 moved = true;
                 continue;
             } else {
                 moved = true;
             }
 
+            // マージ後の新しい要素を追加し、次の要素をスキップ
             newRow.push({ type: current.type, tier: newTier, val: newVal });
             i++;
         } else {
+            // マージしない場合はそのまま追加
             newRow.push(current);
         }
     }
 
+    // 要素数が変わった場合は移動・変化があったとみなす
     if (newRow.length !== row.filter(t => t !== null).length) moved = true;
+    
+    // 行のサイズ(SIZE)に満たない分をnullで埋める
     while (newRow.length < SIZE) newRow.push(null);
 
+    // 処理前後の配列を比較し、変化（移動や値の変更）があったかを厳密に判定する
     for (let i = 0; i < SIZE; i++) {
         if ((row[i] === null) !== (newRow[i] === null) || 
             (row[i] && newRow[i] && (row[i].val !== newRow[i].val || row[i].tier !== newRow[i].tier))) {

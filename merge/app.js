@@ -1,141 +1,21 @@
-
-// 持たせる相手：今の武器がこの武器より弱い人のうち、いちばん弱い人
-function gearTarget(g) {
-    return heroes.filter(canEquip).filter(h => gearPower(h) < g.power)
-        .sort((a, b) => gearPower(a) - gearPower(b))[0];
-}
-// 買い取り額＝旧武具の素材費(売値換算)×率
-function buybackOf(key) {
-    const sum = Object.entries(GEAR[key].cost).reduce((s, [k, n]) => s + n * MATERIALS[k].sell, 0);
-    return Math.floor(sum * CONFIG_GEAR.buybackRate);
-}
-
-function craftGear(key) {
-    const g = GEAR[key];
-    if (!ERAS[g.era].unlocked) return;   // 未解放の武具は作れない
-    const t = gearTarget(g);
-    if (!t) { addLog('武器を持たせられる勇者がいません。', 'danger'); return; }
-    for (const [k, n] of Object.entries(g.cost)) {
-        if ((inventory[k] || 0) < n) { addLog(`素材が足りません（${MATERIALS[k].name}${n}個）。`, 'danger'); return; }
-    }
-    for (const [k, n] of Object.entries(g.cost)) inventory[k] -= n;
-    let msg = `🔨 ${t.name}に${g.name}を作りました！`;
-    if (t.gear) {
-        const back = buybackOf(t.gear);
-        gold += back;
-        msg = `🔨 ${t.name}の${GEAR[t.gear].name}を買い取り（+${back}G）、${g.name}を作りました！`;
-    }
-    t.gear = key;
-    addLog(msg, 'reward');
-    renderShop(); updateView(); saveGame();
-}
-
-// デスペナ：永久雇用側が負けたら、持ち帰り中の戦利品を半分に
-function applyDeathPenalty(h) {
-    if (h.type === 'single') return;
-    for (const k of Object.keys(h.loot)) h.loot[k] = Math.floor(h.loot[k] / 2);
-}
-
-
+/* app.js：施設・時代・売却・冒険ループ・初期化（最後に読み込む）
+ * 依存: data.js / system.js / puzzle.js / party.js / ui.js / renderShop.js */
 /* ==========================================
- * 画面更新・ショップ・進行制御
+ * 施設・時代・売却
  * ========================================== */
-function setTileVars(cell, type) {
-    const m = MATERIALS[type];
-    cell.style.setProperty('--card-bg', m.cardBg);
-    cell.style.setProperty('--card-bd', m.cardBd);
-    cell.style.setProperty('--mat-bg', m.matBg);
-    cell.style.setProperty('--mat-fg', m.matFg);
-    cell.style.setProperty('--mat-bd', m.matBd);
-    cell.style.setProperty('--mat-glow', m.matBd + '4d');
-}
-
-function updateDirectionGuides() {
-    const sides = ERAS[currentEra].sides;
-    const arrows = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️' };
-    for (const dir of ['up', 'down', 'left', 'right']) {
-        const m = MATERIALS[sides[dir]];
-        const el = document.getElementById('guide-' + dir);
-        if (!el) continue;
-        el.textContent = `${arrows[dir]} ${m.name}`;
-        el.style.setProperty('--chip-bg', m.cardBg);
-        el.style.setProperty('--chip-bd', m.cardBd);
-        document.getElementById('grid').style.setProperty('--g-' + dir, m.cardBg);
-    }
-}
-function renderGuide() {
-    const sides = ERAS[currentEra].sides;
-    const arrows = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️' };
-    for (const dir of ['up', 'down', 'left', 'right']) {
-        const m = MATERIALS[sides[dir]];
-        const el = document.getElementById('guide-' + dir);
-        el.textContent = `${arrows[dir]} ${m.name}`;
-        el.style.setProperty('--chip-bg', m.cardBg);
-        el.style.setProperty('--chip-bd', m.cardBd);
-        document.getElementById('grid').style.setProperty('--g-' + dir, m.cardBg);
-    }
-}
-
-function updateView() {
-    document.getElementById('era-name').innerText = ERAS[currentEra].name;
-
-    const gridEl = document.getElementById('grid');
-    gridEl.innerHTML = '';
-
-    board.forEach((tile, idx) => {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        if (tile) {
-            if (tile.tier === 1) {
-                cell.classList.add('tile-card');
-                setTileVars(cell, tile.type);
-                cell.innerText = tile.val;
-            } else {
-                cell.classList.add('tile-mat');
-                setTileVars(cell, tile.type);
-                cell.innerText = kanjiMap[tile.val] || tile.val;
-                cell.onclick = () => harvestTile(idx);
-            }
-        }
-        gridEl.appendChild(cell);
-    });
-
-    document.getElementById('inv-bar').innerHTML = activeMaterials()
-        .map(k => `<div class="status-item">${MATERIALS[k].name}: <span>${inventory[k] || 0}</span></div>`).join('');
-    document.getElementById('gold').innerText = gold;
-    document.getElementById('hero-count').innerText = heroes.length;
-}
-
 
 function buildFacility(facKey) {
     const fac = FACILITIES[facKey];
-    if (gold >= fac.cost) {
-        gold -= fac.cost;
-        fac.unlocked = true;
-        addLog(`🏗️ 【施設建築】${fac.name}を建築しました！他の仲間が雇用可能です。`, 'event');
-        renderShop();
-        updateView();
-        saveGame();
-    } else {
-        addLog(`ゴールドが足りません！（必要: ${fac.cost}G）`);
-    }
-}
-
-function unlockNextEra(nextEraId) {
-    const eraDef = ERAS[nextEraId];
-    if (gold >= eraDef.cost) {
-        gold -= eraDef.cost;
-        eraDef.unlocked = true;
-        currentEra = nextEraId;
-
-        addLog(`🎉 【時代の解放】${eraDef.name} に進化しました！`, 'event');
-        renderShop();
-        updateDirectionGuides();
-        updateView();
-        saveGame();
-    } else {
-        addLog(`ゴールドが足りません！`);
-    }
+    if (!facAvailable(fac)) return;
+    const lack = Object.entries(fac.cost).find(([k, n]) => (inventory[k] || 0) < n);
+    if (lack) { addLog(`資材が足りません！（${MATERIALS[lack[0]].name}${lack[1]}個が必要）`, 'danger'); return; }
+    for (const [k, n] of Object.entries(fac.cost)) inventory[k] -= n;
+    fac.unlocked = true;
+    addLog(`🏗️ 【施設建築】${fac.name}を建築しました！${fac.adds ? '盤面に新しい素材が混ざります。' : '他の仲間が雇用可能です。'}`, 'event');
+    renderShop();
+    updateDirectionGuides();
+    updateView();
+    saveGame();
 }
 
 function sellMaterial(type, amount) {
@@ -151,49 +31,48 @@ function sellMaterial(type, amount) {
     }
 }
 
-function hireHero(type, cost, heroName) {
-    const isTavernJob = (type === 'mage' || type === 'priest');
-    if (isTavernJob && !FACILITIES.tavern.unlocked) {
-        addLog(`酒場を建築してから雇ってください。`);
-        return;
-    }
-
-    if (gold >= cost) {
-        gold -= cost;
-        heroes.push({ type: type, name: heroName });
-        addLog(`【雇用】${heroName}を迎え入れました！`, 'event');
-        updateView();
-        saveGame();
-    } else {
-        addLog(`ゴールドが足りません。`);
-    }
-}
-
-function craftWeapon(weaponName, matType, cost) {
-    if ((inventory[matType] || 0) >= cost) {
-        inventory[matType] -= cost;
-        addLog(`【クラフト】${weaponName} を作成・支給しました！`, 'event');
-        updateView();
-        saveGame();
-    } else {
-        addLog(`クラフト素材が足りません。`);
-    }
-}
-
 /* ==========================================
  * 冒険（外征）ループ＆帰還一括精算
  * ========================================== */
+// 外征の準備：行動力と戦利品トランク（loot）を用意する
+function startExpedition(h) {
+    h.stamina = CONFIG.staminaMax;
+    h.loot = { gold: 0, wood: 0, stone: 0, copper: 0, iron: 0 };
+    h.idle = 0;
+}
+
+// 1スワイプ＝1日。行動力がある勇者の中から、行動力が高い人ほど選ばれやすく、1人だけ動く
 function adventureLoop() {
+    turn++;
     if (heroes.length === 0) return;
 
-    let index = Math.floor(Math.random() * heroes.length);
-    let h = heroes[index];
-
-    // 初回初期化：スタミナと戦利品トランク（loot）を用意
-    if (h.stamina === undefined) {
-        h.stamina = (h.type === 'single') ? 3 : 10;
-        h.loot = { gold: 0, wood: 0, stone: 0, copper: 0, iron: 0 };
+    for (const x of heroes) {
+        if (x.stamina === undefined) startExpedition(x);
+        else if (x.stamina > CONFIG.staminaMax) x.stamina = CONFIG.staminaMax;
     }
+    const ready = heroes.filter(x => x.stamina > 0);
+    let h = null;
+    if (ready.length > 0) {
+        let r = Math.random() * ready.reduce((sum, x) => sum + x.stamina, 0);
+        h = ready.find(x => (r -= x.stamina) < 0) || ready[ready.length - 1];
+    }
+
+    // 動かなかった勇者は、一定日数ごとに行動力が1回復（使い捨ては回復しない）
+    for (const x of heroes) {
+        if (x === h || x.type === 'single' || x.stamina >= CONFIG.staminaMax) continue;
+        x.idle = (x.idle || 0) + 1;
+        if (x.idle >= CONFIG.regenDays) { x.stamina++; x.idle = 0; }
+    }
+
+    // 全員の行動力が0なら、その日は休息
+    if (!h) {
+        if (!allResting) { allResting = true; addLog('😴 勇者たちは休息中…（行動力が回復するまで待機）'); }
+        updateView();
+        return;
+    }
+    allResting = false;
+    h.idle = 0;
+    let index = heroes.indexOf(h);
 
     // 行動消費
     h.stamina--;
@@ -237,8 +116,11 @@ function adventureLoop() {
             addLog(`🏰 📦 【外征完了】${h.name}が無事帰還！ 獲得: [ ${lootStr} ] （王都で休養に入ります）`, 'reward');
         }
 
-        // パーティから一時除外（使い捨て・永久ともに帰還完了）
-        heroes.splice(index, 1);
+        if (h.type === 'single') {
+            heroes.splice(index, 1);        // 使い捨ては退役
+        } else {
+            h.loot = { gold: 0, wood: 0, stone: 0, copper: 0, iron: 0 };   // 永久雇用は戦利品を渡し、行動力の回復を待つ（武具は持ったまま）
+        }
         saveGame();
     }
 
@@ -250,9 +132,7 @@ function initGame(isReset = false) {
 
     if (isReset) {
         localStorage.removeItem(SAVE_KEY);
-        currentEra = 'primal';   // 最初の時代のキーに合わせてください
         inventory = {};          // constで宣言している場合は for (const k in inventory) delete inventory[k];
-
 
     }
 
@@ -260,8 +140,6 @@ function initGame(isReset = false) {
         updateDirectionGuides();
         renderShop();
         updateView();
-        if (adventureTimer) clearInterval(adventureTimer);
-        adventureTimer = setInterval(adventureLoop, CONFIG.adventureIntervalMs);
         addLog('前回のセーブデータからゲームを再開しました。', 'event');
         return;
     }
@@ -270,24 +148,19 @@ function initGame(isReset = false) {
     for (const k of Object.keys(MATERIALS)) inventory[k] = 0;   // 所持数も毎回0に戻す
     gold = 99999;
     heroes = [];
+    turn = 0;
+    allResting = false;
     isGameOver = false;
 
-    // 時代・施設を最初の状態に戻す
-    const firstEra = Object.keys(ERAS)[0];
-    currentEra = firstEra;
-    for (const [k, e] of Object.entries(ERAS)) e.unlocked = (k === firstEra);
-    FACILITIES.tavern.unlocked = false;
+    // 施設を最初の状態に戻す
+    for (const f of Object.values(FACILITIES)) f.unlocked = false;
 
     renderShop();
     updateDirectionGuides();
 
-    const sides = ERAS[currentEra].sides;
-    spawnTile(sides.up);
-    spawnTile(sides.left);
+    spawnTile('up');
+    spawnTile('left');
     updateView();
-
-    if (adventureTimer) clearInterval(adventureTimer);
-    adventureTimer = setInterval(adventureLoop, CONFIG.adventureIntervalMs);
 
     // ログ書き込み
     addLog('👑 王様：「あなたは王様です。まず、勇者を雇い、冒険に出てもらいましょう！」', 'event');
