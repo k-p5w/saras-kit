@@ -54,9 +54,9 @@ export const gearOpen = (g: GearConfig): boolean => !g.needs || FACILITIES[g.nee
 export const facAvailable = (f: FacilityConfig): boolean => !f.unlocked && (!f.needs || FACILITIES[f.needs].unlocked);
 
 export const ENEMIES: Record<string, EnemyConfig> = {
-    ume: { name: '梅の魔物', power: 15, need: 5, reward: 10, needs: null },
-    take: { name: '竹の魔物', power: 40, need: 3, reward: 30, needs: 'copper_mine' },
-    matsu: { name: '松の魔物', power: 90, need: 1, reward: 80, needs: 'iron_mine' },
+    ume: { name: '下位の魔物', power: 15, need: 5, reward: 10, needs: null },
+    take: { name: '上位の魔物', power: 40, need: 3, reward: 30, needs: 'copper_mine' },
+    matsu: { name: '最上位の魔物', power: 90, need: 1, reward: 80, needs: 'iron_mine' },
 };
 
 export const BOSS = { name: '魔王', power: 150 };
