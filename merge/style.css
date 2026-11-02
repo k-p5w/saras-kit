@@ -355,3 +355,7 @@ button:disabled {
     border: 1px solid #555;
     box-shadow: none;
 }
+
+/* --- クリア画面 --- */
+.modal-box.clear-box { border-color: #ffd700; box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); }
+.modal-box.clear-box h2 { color: #ffd700; }

@@ -48,6 +48,7 @@ function saveGame() {
             gold,
             heroes,
             turn,
+            story,
             facilities: Object.fromEntries(Object.entries(FACILITIES).map(([k, f]) => [k, f.unlocked])),
             customSideMats // ★ 追加
         };
@@ -67,6 +68,12 @@ function loadGame() {
         gold = parsed.gold ?? 50;
         heroes = parsed.heroes || [];
         turn = parsed.turn || 0;
+        story = newStory();
+        if (parsed.story) {
+            story.cleared = !!parsed.story.cleared;
+            story.clearDay = parsed.story.clearDay ?? null;
+            Object.assign(story.kills, parsed.story.kills || {});
+        }
         customSideMats = parsed.customSideMats || { up: null, down: null, left: null, right: null };
         for (const f of Object.values(FACILITIES)) f.unlocked = false;
         if (parsed.facilities) {

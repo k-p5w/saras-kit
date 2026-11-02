@@ -5,6 +5,7 @@ const CONFIG = {
     completeBonus: 1000,   // 完走ボーナス（難しいぶん多め）
     harvestRate: 16,      // 漢数字を回収したとき、表示の値 × この数だけ資材がもらえる
     cardMax: 16,
+    partyMax: 6,   // パーティの最大人数（使い捨て勇者も数える）
     staminaMax: 3,   // 勇者の行動力の最大値（動くと1減る）
     regenDays: 2,    // 動かなかった日がこの回数たまると、行動力が1回復
 };
@@ -117,7 +118,27 @@ function rollSupply(dir) {
 /* ==========================================
  * 外征イベント（戦利品を一時保持する形式）
  * ========================================== */
+/* ==========================================
+ * 討伐とクリア（敵の戦力は、パーティの戦力と比べて勝率が決まる）
+ * ========================================== */
+const ENEMIES = {
+    ume:   { name: '梅の魔物', power: 15, need: 5, reward: 10, needs: null },
+    take:  { name: '竹の魔物', power: 40, need: 3, reward: 30, needs: 'copper_mine' },
+    matsu: { name: '松の魔物', power: 90, need: 1, reward: 80, needs: 'iron_mine' },
+};
+const BOSS = { name: '魔王', power: 150 };
+const newStory = () => ({ kills: { ume: 0, take: 0, matsu: 0 }, cleared: false, clearDay: null });
+let story = newStory();
+
 const ADVENTURE_EVENTS = [
+    {   // 討伐：戦える敵がいるときだけ抽選に入る。勝敗でログの色が変わる
+        weight: 25,
+        condition: () => huntTargets().length > 0,
+        effect: (h) => { h.lastBattle = fightEnemy(h); },
+        text: h => h.lastBattle.text,
+        type: 'event',
+        typeOf: h => h.lastBattle.win ? 'reward' : 'danger'
+    },
     { 
         weight: 25, 
         text: h => `⚔️ ${h.name}が魔物を撃破し、戦利品を獲得！ (+10G)`, 

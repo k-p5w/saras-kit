@@ -1,4 +1,6 @@
 function renderShop() {
+    renderStory();   // 討伐の進み具合
+    const full = heroes.length >= CONFIG.partyMax;   // 満員なら雇用ボタンを押せなくする
     const SHOW_ALL_LOCKED = false;              // true にすると、先の時代の武具も全部グレーで表示
 
     // 拠点の拡張（施設）
@@ -18,22 +20,22 @@ function renderShop() {
     let tavernHtml = `
     <div class="shop-item">
         <div><b>使い捨て勇者 (外征1回)</b><br><small>費用: 25G</small></div>
-        <button onclick="hireHero('single', 25, '使い捨て勇者')">雇う</button>
+        <button onclick="hireHero('single', 25, '使い捨て勇者')" ${full ? 'disabled' : ''}>${full ? '満員' : '雇う'}</button>
     </div>
     <div class="shop-item">
         <div><b>王国の勇者（永久雇用）</b><br><small>費用: 100G</small></div>
-        <button onclick="hireHero('permanent', 100, '王国の勇者')">雇う</button>
+        <button onclick="hireHero('permanent', 100, '王国の勇者')" ${full ? 'disabled' : ''}>${full ? '満員' : '雇う'}</button>
     </div>
 `;
     if (FACILITIES.tavern.unlocked) {
         tavernHtml += `
             <div class="shop-item" style="border-left: 3px solid #ffb74d;">
                 <div><b>魔法使い (酒場仲間)</b><br><small>費用: 75G</small></div>
-                <button onclick="hireHero('mage', 75, '魔法使い')">雇う</button>
+                <button onclick="hireHero('mage', 75, '魔法使い')" ${full ? 'disabled' : ''}>${full ? '満員' : '雇う'}</button>
             </div>
             <div class="shop-item" style="border-left: 3px solid #ffb74d;">
                 <div><b>僧侶 (酒場仲間)</b><br><small>費用: 120G</small></div>
-                <button onclick="hireHero('priest', 120, '僧侶')">雇う</button>
+                <button onclick="hireHero('priest', 120, '僧侶')" ${full ? 'disabled' : ''}>${full ? '満員' : '雇う'}</button>
             </div>
         `;
     } else {
