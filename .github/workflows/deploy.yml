@@ -32,17 +32,20 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: merge-game/package-lock.json
 
       - name: Install dependencies
+        working-directory: merge-game
         run: npm ci
 
       - name: Build
+        working-directory: merge-game
         run: npm run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: merge-game/dist
 
       - name: Deploy to GitHub Pages
         id: deployment
