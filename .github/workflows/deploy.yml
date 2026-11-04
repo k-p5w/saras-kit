@@ -1,9 +1,8 @@
-﻿name: Deploy Merge Game
+﻿name: Deploy to GitHub Pages
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -18,35 +17,39 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: npm
           cache-dependency-path: merge-game/package-lock.json
 
-      - name: Install dependencies
+      - name: Build merge-game
         working-directory: merge-game
-        run: npm ci
+        run: |
+          npm ci
+          npm run build
 
-      - name: Build
-        working-directory: merge-game
-        run: npm run build
+      - name: Assemble site
+        run: |
+          mkdir _site
+          # 既存の静的ページはそのまま配置
+          cp -r food grandprix merge _site/
+          # merge-game は dist の中身だけを配置
+          mkdir _site/merge-game
+          cp -r merge-game/dist/. _site/merge-game/
+          touch _site/.nojekyll
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
         with:
-          path: merge-game/dist
+          path: _site
 
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
