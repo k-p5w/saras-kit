@@ -13,10 +13,10 @@ export const SAVE_KEY = 'xyz';
 export const CONFIG_GEAR = { buybackRate: 0.5, heroPower: 10 };
 
 export const GEAR: Record<string, GearConfig> = {
-    wood_sword: { needs: null, name: '木剣', power: 3, cost: { wood: 10 } },
-    stone_sword: { needs: null, name: '石剣', power: 6, cost: { stone: 15, wood: 5 } },
-    copper_sword: { needs: 'copper_mine', name: '銅剣', power: 10, cost: { copper: 15, wood: 5 } },
-    iron_sword: { needs: 'iron_mine', name: '鉄剣', power: 16, cost: { iron: 20, wood: 5 } },
+    wood_sword: { needs: null, name: '木の武具', power: 3, cost: { wood: 10 } },
+    stone_sword: { needs: null, name: '石の武具', power: 6, cost: { stone: 15, wood: 5 } },
+    copper_sword: { needs: 'copper_mine', name: '銅の武具', power: 10, cost: { copper: 15, wood: 5 } },
+    iron_sword: { needs: 'iron_mine', name: '鉄の武具', power: 16, cost: { iron: 20, wood: 5 } },
 };
 
 export const HERO_TYPES: Record<string, { name: string; desc: string; cost: number; type: string; needs?: string }> = {

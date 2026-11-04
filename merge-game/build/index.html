@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>マージパズル RPG</title>
+    <title>倍々★パズル</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -13,7 +13,7 @@
     <!-- 初回巨大ポップアップ -->
     <div id="king-modal" class="modal-overlay hidden">
         <div class="modal-box">
-            <h2>👑 王様からの布告 👑</h2>
+            <h2>👑 はじめに 👑</h2>
             <p>
                 <strong>あなたは王様です。</strong><br><br>
                 まず、勇者を雇い、冒険に出てもらいましょう！
@@ -25,9 +25,9 @@
     <!-- 上部ステータスバー -->
     <div class="status-bar">
         <button class="help-btn" onclick="openGuideModal()">❓ 手引き</button>
+        <div class="status-item">Day: <span id="turn">0</span></div>
         <div class="status-item">拠点: <span id="era-name" class="era-badge">拠点Lv.1</span></div>
         <span id="inv-bar" style="display: contents;"></span>
-        <div class="status-item">Day: <span id="turn">0</span></div>
         <div class="status-item gold-item">所持金: <span id="gold">100</span>G</div>
         <div class="status-item">パーティ数: <span id="hero-count">0</span></div>
         <button class="reset-btn" onclick="resetBoardWithPenalty()">盤面リセット（資材が半減します）</button>
